@@ -27,7 +27,7 @@
           "columns": "as ods209, measured as double"
         }
       },
-      "snapshots": "tools/check_sources.py snapshot: data/raw/elia/<dataset>_<UTC>.csv plus .json (request, retrieved_at, sha256); not scheduled yet (#6)",
+      "snapshots": "tools/check_sources.py snapshot: data/raw/elia/<dataset>_<UTC microseconds>_<uuid>.csv plus .json (request, request_started_at, retrieved_at = response received, sha256), exclusive create; not scheduled yet (#6)",
       "observed_coverage_at_freezing": "2024-03-15..2026-11-01: 962 calendar days, 746 with every hour observed, 22872 of 23088 hours",
       "units": "MW, mean power over the 15-minute interval",
       "timestamp": "datetime = interval start, UTC in the API and exports",

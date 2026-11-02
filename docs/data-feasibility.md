@@ -78,8 +78,8 @@ Changes at the switch, and how they were checked:
 - Open-Meteo Single Runs, `models=ecmwf_ifs`. ECMWF IFS HRES 9 km runs from 2024-03-14; other models from
   2026-04-02 only.
 - **Belgium:** one request returns all 11 province points. Sampled every 21 days from 2024-03-15 to yesterday,
-  the 00 UTC run of D-1 held every hour of local day D (exact expected UTC labels, unique, every requested
-  variable non-null) at every point. 06 UTC runs (needed for the 18:00 comparison) do the same from August 2024.
+  the 00 UTC run of D-1 held every hour of local day D at every point (exact expected UTC labels, unique;
+  radiation non-null at each hour's end label, temperature, wind and cloud cover at both its start and end). 06 UTC runs (needed for the 18:00 comparison) do the same from August 2024.
 - **PVDAQ:** 47 sampled 00 UTC runs from 2024-03-14 to 2025-12-30 each hold every hour of the next local day.
 - These are sampled feasibility checks, not verified continuous coverage. Full coverage is checked when #3
   builds the dataset; a missing run makes that issuance missing.

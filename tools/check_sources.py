@@ -20,6 +20,7 @@ import io
 import json
 import sys
 import time
+import uuid
 from datetime import datetime, timezone
 import urllib.parse
 import urllib.request
@@ -50,15 +51,18 @@ def elia(dataset: str, where: str) -> pd.DataFrame:
     """Export a dataset, save the raw bytes as a new snapshot with its request and checksum, parse."""
     q = urllib.parse.urlencode({"where": where, "order_by": "datetime", "delimiter": ","})
     url = f"{ELIA}/{dataset}/exports/csv?{q}"
-    retrieved = datetime.now(timezone.utc)
+    started = datetime.now(timezone.utc)
     body = get(url)
+    retrieved = datetime.now(timezone.utc)  # response fully received; use this for availability checks
     out = RAW / "elia"
     out.mkdir(parents=True, exist_ok=True)
-    stem = f"{dataset}_{retrieved:%Y%m%dT%H%M%SZ}"
-    (out / f"{stem}.csv").write_bytes(body)
-    (out / f"{stem}.json").write_text(json.dumps({
-        "dataset": dataset, "where": where, "url": url, "retrieved_at": retrieved.isoformat(),
-        "bytes": len(body), "sha256": hashlib.sha256(body).hexdigest()}, indent=1))
+    stem = f"{dataset}_{retrieved:%Y%m%dT%H%M%S%fZ}_{uuid.uuid4().hex}"
+    with open(out / f"{stem}.csv", "xb") as f:  # "x": never replace an existing snapshot
+        f.write(body)
+    with open(out / f"{stem}.json", "x") as f:
+        json.dump({"dataset": dataset, "where": where, "url": url,
+                   "request_started_at": started.isoformat(), "retrieved_at": retrieved.isoformat(),
+                   "bytes": len(body), "sha256": hashlib.sha256(body).hexdigest()}, f, indent=1)
     df = pd.read_csv(io.BytesIO(body), encoding="utf-8-sig")
     df["datetime"] = pd.to_datetime(df["datetime"], utc=True)
     if "measured_upscaled" in df:  # ods209 publishes it as text with a decimal comma
@@ -79,18 +83,27 @@ def day_hours(day: pd.Timestamp, tz: str) -> pd.DatetimeIndex:
     return pd.date_range(start.tz_convert("UTC"), end.tz_convert("UTC"), freq="h", inclusive="left")
 
 
+RADIATION = {"shortwave_radiation", "direct_normal_irradiance", "diffuse_radiation"}  # mean of the hour ending at the label
+
+
 def check_run(loc: dict, hourly: str, day: pd.Timestamp, tz: str, run: str) -> None:
-    """The run has every requested variable, non-null, at exactly the labels covering local day `day`."""
+    """Every requested variable is non-null at the labels local day `day` needs: radiation at each hour's end,
+    instantaneous variables at both its start and end."""
     h = pd.DataFrame(loc["hourly"])
     h["time"] = pd.to_datetime(h["time"], utc=True)
     assert h["time"].is_unique, (run, "duplicate labels")
     h = h.set_index("time")
     variables = hourly.split(",")
     assert set(variables) <= set(h.columns), (run, set(variables) - set(h.columns))
-    labels = day_hours(day, tz) + pd.Timedelta(hours=1)  # radiation describes the hour ending at the label
-    missing = labels.difference(h.index)
+    starts = day_hours(day, tz)
+    ends = starts + pd.Timedelta(hours=1)
+    both = starts.union(ends)
+    missing = both.difference(h.index)
     assert missing.empty, (run, loc.get("latitude"), list(missing))
-    assert h.loc[labels, variables].notna().all().all(), (run, loc.get("latitude"))
+    rad = [v for v in variables if v in RADIATION]
+    inst = [v for v in variables if v not in RADIATION]
+    assert h.loc[ends, rad].notna().all().all(), (run, loc.get("latitude"), "radiation")
+    assert h.loc[both, inst].notna().all().all(), (run, loc.get("latitude"), "instantaneous")
 
 
 # Belgium: Elia actuals and benchmark forecasts
@@ -252,18 +265,23 @@ def write_fixtures(raw: pd.DataFrame) -> None:
 
 
 def self_test() -> None:
-    """check_run accepts the fixture run and rejects it with one hour removed (offline)."""
+    """check_run accepts the fixture run and rejects broken copies of it (offline)."""
     j = json.loads((ROOT / "fixtures/ecmwf_ifs_2025-06-15T00.json").read_text())
     hourly = MANIFEST["installation_experiment"]["weather"]["params"]["hourly"]
     day = pd.Timestamp("2025-06-16")
     check_run(j, hourly, day, "America/Los_Angeles", "fixture")
-    i = j["hourly"]["time"].index("2025-06-16T20:00")
+    t = j["hourly"]["time"]
+    i = t.index("2025-06-16T20:00")
     cut = {**j, "hourly": {k: v[:i] + v[i + 1:] for k, v in j["hourly"].items()}}
-    try:
-        check_run(cut, hourly, day, "America/Los_Angeles", "fixture minus one hour")
-    except AssertionError:
-        return
-    raise AssertionError("check_run accepted a run with a missing hour")
+    first = t.index("2025-06-16T07:00")  # start of the first local hour: only instantaneous variables need it
+    temp = {**j, "hourly": {**j["hourly"], "temperature_2m": [None if n == first else x
+                                                              for n, x in enumerate(j["hourly"]["temperature_2m"])]}}
+    for name, broken in [("one hour removed", cut), ("first start temperature null", temp)]:
+        try:
+            check_run(broken, hourly, day, "America/Los_Angeles", name)
+        except AssertionError:
+            continue
+        raise AssertionError(f"check_run accepted a run with {name}")
 
 
 if __name__ == "__main__":

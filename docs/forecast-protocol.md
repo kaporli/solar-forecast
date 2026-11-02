@@ -82,8 +82,9 @@ latest available run and records which one; such issuances are flagged and repor
   at the time is unverified. Days without an Elia forecast (2026-10-28 to 2026-11-01 for the 11:00 forecast)
   are excluded from the Elia comparison only, and the count is reported.
 - Snapshots: `check_sources.py snapshot` saves the ods209 and ods210 responses under `data/raw/elia/` with a
-  UTC timestamp in the filename and a sidecar holding the request, retrieval time and SHA-256; nothing is
-  overwritten. It is **not scheduled yet**: scheduled collection is part of #6. Until it runs at least daily
+  microsecond UTC timestamp and a random suffix in the filename, created exclusively so an existing snapshot
+  is never replaced, and a sidecar holding the request, SHA-256, `request_started_at` and `retrieved_at`
+  (response fully received). Availability at an issuance cutoff is judged by `retrieved_at`. It is **not scheduled yet**: scheduled collection is part of #6. Until it runs at least daily
   after 11:00 and 18:00, Elia forecasts that ods209 does not keep are lost, and the 2026-10-28 to 2026-11-01
   gap cannot be recovered from snapshots.
 - The result is reported as measured; there is no target of beating Elia.
