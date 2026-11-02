@@ -37,14 +37,14 @@ FREEZE_LAST_DAY = "2026-11-01"
 
 
 def get(url: str) -> bytes:
-    for attempt in range(4):
+    for attempt in range(6):  # Open-Meteo returns 5xx when overloaded; back off up to about 5 minutes
         try:
             with urllib.request.urlopen(url, timeout=300) as r:
                 return r.read()
         except Exception:
-            if attempt == 3:
+            if attempt == 5:
                 raise
-            time.sleep(5 * (attempt + 1))
+            time.sleep(10 * 2 ** attempt)
 
 
 def elia(dataset: str, where: str) -> pd.DataFrame:
