@@ -14,10 +14,10 @@ validate the Belgian model.
 
 | Question | Result |
 | --- | --- |
-| Belgian historical evaluation | **Go.** Elia Belgium Total with archived ECMWF IFS runs at 11 province points: 962 complete local days, 2024-03-15 to 2026-11-01, growing daily |
+| Belgian historical evaluation | **Go, retrospective.** Elia Belgium Total with archived ECMWF IFS runs at 11 province points, 2024-03-15 to 2026-11-01 (growing daily): 962 calendar days, 746 with every hour observed. Results hold under stated availability assumptions (`docs/forecast-protocol.md`) |
 | Belgian live scoring | **Go.** Elia ods210 publishes each quarter-hour about 20 minutes after it ends; no account, CC BY 4.0 |
-| Elia benchmark at matched cutoffs | **Go, with gaps.** 11:00 and 18:00 day-ahead forecasts archived since 2020; missing in the new history dataset for 2026-10-28 to 2026-11-01. From now on we snapshot them ourselves |
-| Installation experiment (PVDAQ 2107) | **Go.** 657 target days, 2024-03-15 to 2025-12-31; no live scoring (yearly batches) |
+| Elia benchmark at matched cutoffs | **Go, with gaps.** 11:00 and 18:00 day-ahead forecasts archived since 2020; missing in the new history dataset for 2026-10-28 to 2026-11-01. A snapshot command exists; scheduling it is part of #6 |
+| Installation experiment (PVDAQ 2107) | **Go.** 657 target days (654 with every hour observed), 2024-03-15 to 2025-12-31; no live scoring (yearly batches) |
 | Single Belgian rooftop | **Dropped.** No free live source: the original export is lost, the PVOutput API needs a paid account, and scraping it was rejected |
 
 ## Belgian actuals and benchmark: Elia open data
@@ -53,7 +53,9 @@ Changes at the switch, and how they were checked:
 
 ### Quality in the evaluation window
 
-- Missing `measured`: 0.82 % of quarter-hours in 2024, none in 2025 or 2026 (ods032).
+- Missing `measured`: 215 quarter-hours, one per day from 2024-03-15 to 2024-10-15, always the last quarter-hour
+  of the local day (21:45 or 22:45 UTC); none in 2025 or 2026. With the migration gap, 216 of 962 target days
+  have a missing hour: 746 days and 22,872 of 23,088 hours are fully observed.
 - Missing `dayahead11hforecast`: none from 2024; `dayaheadforecast` (18:00): none.
 - ods209 since the switch: actuals complete; `dayahead11hforecast` present only for 26 and 27 October and
   `dayaheadforecast` for 26, 27 and 29 October. These days are lost unless Elia backfills them.
@@ -66,7 +68,8 @@ Changes at the switch, and how they were checked:
 - At 11:35 UTC on 2026-11-02, ods210 held actuals up to the interval starting 11:15 UTC.
 - At 12:35 local time the 11:00 day-ahead forecast for the next day was already present.
 - Revisions: ods210 and ods209 agree exactly on the one shared day (96 quarter-hours). Later revisions of
-  actuals or forecasts are not ruled out; the live system keeps every snapshot.
+  actuals or forecasts are not ruled out. `check_sources.py` saves every Elia response as a timestamped
+  snapshot with its request and checksum; scheduled daily collection is part of #6 and not running yet.
 - `mostrecentforecast` is overwritten as new forecasts arrive, so it is not a fixed issuance and cannot serve as
   a matched benchmark.
 
@@ -75,9 +78,11 @@ Changes at the switch, and how they were checked:
 - Open-Meteo Single Runs, `models=ecmwf_ifs`. ECMWF IFS HRES 9 km runs from 2024-03-14; other models from
   2026-04-02 only.
 - **Belgium:** one request returns all 11 province points. Sampled every 21 days from 2024-03-15 to yesterday,
-  the 00 UTC run of D-1 covered local day D completely at every point. 06 UTC runs (needed for the 18:00
-  comparison) do the same from August 2024.
-- **PVDAQ:** 47 sampled 00 UTC runs from 2024-03-14 to 2025-12-30 each cover the next local day.
+  the 00 UTC run of D-1 held every hour of local day D (exact expected UTC labels, unique, every requested
+  variable non-null) at every point. 06 UTC runs (needed for the 18:00 comparison) do the same from August 2024.
+- **PVDAQ:** 47 sampled 00 UTC runs from 2024-03-14 to 2025-12-30 each hold every hour of the next local day.
+- These are sampled feasibility checks, not verified continuous coverage. Full coverage is checked when #3
+  builds the dataset; a missing run makes that issuance missing.
 - 06 UTC runs fail with HTTP 400 up to 2024-08-01 and are present from 2024-08-15.
 - Units: W/m2, degC, m/s, %. Radiation is the mean over the preceding hour.
 - Publication: on 2026-11-02 Open-Meteo reported the 00 UTC run available at 07:41:25 UTC. That is the only
@@ -121,6 +126,7 @@ Arbuckle, California; 892.8 kWp DC, fixed 25 deg tilt, azimuth 180, 24 ABB TRIO-
   reconstructed.
 - Fleet orientation and tilt mix for the aggregate physics baseline.
 - PVDAQ 2107: effective AC limit, cause of the two zero days.
+- Fall-back hours in PVDAQ: which occurrence the single set of 01:00 to 01:45 labels belongs to.
 
 ## Attribution
 
