@@ -77,13 +77,14 @@ Changes at the switch, and how they were checked:
 
 - Open-Meteo Single Runs, `models=ecmwf_ifs`. ECMWF IFS HRES 9 km runs from 2024-03-14; other models from
   2026-04-02 only.
-- **Belgium:** one request returns all 11 province points. Sampled every 21 days from 2024-03-15, the 00 UTC
-  run of D-1 had 23 to 25 non-null hours for local day D at every point, and 06 UTC runs from August 2024 the
-  same (row-count check, 2026-11-02).
-- **PVDAQ:** 47 sampled 00 UTC runs from 2024-03-14 to 2025-12-30 passed the same row-count check.
-- **Pending:** the stricter check in `check_run` (exact expected UTC labels, unique; radiation at each hour's
-  end label, temperature, wind and cloud cover at both start and end) has not yet completed a sweep. The rerun
-  on 2026-11-02 was interrupted by Open-Meteo errors (503 overloaded, then a 500 on the 2025-12-18 00 UTC run).
+- **Belgium:** one request returns all 11 province points. Sampled every 21 days from 2024-03-15 (46 target
+  days), the 00 UTC run of D-1, and from August 2024 also the 06 UTC run, held every hour of local day D at
+  every point: exact expected UTC labels, unique; radiation non-null at each hour's end label; temperature, wind
+  and cloud cover non-null at both its start and end.
+- **PVDAQ:** 47 sampled 00 UTC runs from 2024-03-14 to 2025-12-30 pass the same check for the next local day.
+- Verified 2026-11-02 15:57 to 15:59 UTC with `uv run tools/check_sources.py` at commit b420d9d (exit 0).
+  Open-Meteo was unstable that afternoon (503, 504, 500, and a timeout sent as HTTP 200 with a text body);
+  the checker retries these.
 - These are sampled feasibility checks, not verified continuous coverage. Full coverage is checked when #3
   builds the dataset; a missing run makes that issuance missing.
 - 06 UTC runs fail with HTTP 400 up to 2024-08-01 and are present from 2024-08-15.
