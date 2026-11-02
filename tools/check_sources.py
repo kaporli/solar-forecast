@@ -72,8 +72,14 @@ def elia(dataset: str, where: str) -> pd.DataFrame:
 
 def single_run(run: str, params: dict) -> dict | list:
     q = urllib.parse.urlencode({**params, "run": run}, safe=",")
-    return json.loads(get(f"{params['endpoint']}?{q}" if "endpoint" in params else
-                          f"https://single-runs-api.open-meteo.com/v1/forecast?{q}"))
+    url = f"{params['endpoint']}?{q}" if "endpoint" in params else f"https://single-runs-api.open-meteo.com/v1/forecast?{q}"
+    for attempt in range(4):  # a server timeout can arrive as HTTP 200 with a plain-text body
+        try:
+            return json.loads(get(url))
+        except json.JSONDecodeError:
+            if attempt == 3:
+                raise
+            time.sleep(30 * (attempt + 1))
 
 
 def day_hours(day: pd.Timestamp, tz: str) -> pd.DatetimeIndex:
