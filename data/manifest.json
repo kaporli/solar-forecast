@@ -1,0 +1,109 @@
+{
+  "checked_on": "2026-11-02",
+  "belgium": {
+    "actuals_and_benchmark": {
+      "publisher": "Elia Transmission Belgium SA",
+      "license": "CC-BY-4.0 (Elia Open Data Licence, https://opendata.elia.be/pages/licence)",
+      "attribution": "Source: Elia Open Data (Elia Transmission Belgium SA), CC BY 4.0.",
+      "api": "https://opendata.elia.be/api/explore/v2.1/catalog/datasets/<id>/exports/csv",
+      "datasets": {
+        "ods032": {
+          "role": "history before the 2026-10-26 switch",
+          "filter": "region='Belgium'",
+          "range_utc": "2020-09-30T22:00 .. 2026-10-25T22:45",
+          "rows_belgium": 212740,
+          "columns": "datetime, resolutioncode, region, measured, mostrecentforecast, dayahead11hforecast, dayaheadforecast, weekaheadforecast (+ P10/P90), monitoredcapacity, loadfactor"
+        },
+        "ods209": {
+          "role": "history from the switch, updated daily",
+          "filter": "region='Belgium' and gridconnectiontype='Total'",
+          "range_utc": "2026-10-26T00:00 onward",
+          "columns": "datetime, region, gridconnectiontype, measured_upscaled (TEXT with decimal comma), mostrecentforecast, dayahead11hforecast, dayaheadforecast, dayplustenforecast (+ P10/P90), monitoredcapacity"
+        },
+        "ods210": {
+          "role": "near real time: live actuals and the day-ahead forecasts to snapshot",
+          "filter": "region='Belgium' and gridconnectiontype='Total'",
+          "window": "about 10 days, from the previous local day to D+8",
+          "columns": "as ods209, measured as double"
+        }
+      },
+      "units": "MW, mean power over the 15-minute interval",
+      "timestamp": "datetime = interval start, UTC in the API and exports",
+      "elia_forecasts": {
+        "dayahead11hforecast": "day-ahead, published 11:00 Europe/Brussels on D-1",
+        "dayaheadforecast": "day-ahead, published 18:00 Europe/Brussels on D-1",
+        "mostrecentforecast": "overwritten as new forecasts arrive; not a fixed issuance"
+      }
+    },
+    "weather": {
+      "endpoint": "https://single-runs-api.open-meteo.com/v1/forecast",
+      "params": {
+        "models": "ecmwf_ifs",
+        "run": "<D-1>T00:00 for the 11:00 issuance, <D-1>T06:00 for the 18:00 issuance",
+        "latitude": "51.22,50.85,51.05,50.88,50.45,50.93,50.63,49.95,50.47,50.72,51.21",
+        "longitude": "4.40,4.35,3.72,4.70,3.95,5.34,5.57,5.50,4.87,4.61,3.22",
+        "timezone": "UTC",
+        "wind_speed_unit": "ms",
+        "hourly": "shortwave_radiation,direct_normal_irradiance,diffuse_radiation,temperature_2m,wind_speed_10m,cloud_cover"
+      },
+      "points": "config/belgium.json",
+      "license": "CC-BY-4.0",
+      "attribution": "Weather data by Open-Meteo.com (CC BY 4.0), model output from ECMWF IFS HRES."
+    }
+  },
+  "installation_experiment": {
+    "note": "Separate installation-level experiment. Its results do not validate the Belgian model.",
+    "production": {
+      "id": "pvdaq-2107",
+      "dataset": "PVDAQ / 2023 DOE Solar Data Prize, system 2107",
+      "doi": "10.25984/1846021",
+      "license": "CC-BY-4.0",
+      "attribution": "Data from the NREL PV Data Acquisition (PVDAQ) public dataset, Open Energy Data Initiative, DOI 10.25984/1846021.",
+      "retrieval": "anonymous HTTPS GET from the public OEDI S3 bucket",
+      "base_url": "https://oedi-data-lake.s3.amazonaws.com/pvdaq/2023-solar-data-prize/2107_OEDI",
+      "column": "meter_revenue_grade_ac_output_meter_149578",
+      "units": "kW, average AC power over the interval (metadata: raw_units kw, aggregation_type avg)",
+      "sampling": "15 min",
+      "timestamp": "measured_on, America/Los_Angeles wall time with DST, label marks the interval end",
+      "files": [
+        { "path": "metadata/2107_system_metadata.json", "bytes": 64652, "sha256": "17e4f7f448fcb2bec43f7610b40c1f7f4fc794ccc185e41dcde0514afba73ae5", "s3_last_modified": "2024-01-09T16:15:10Z" },
+        { "path": "data/2107_meter_15m_data_2024.csv", "bytes": 849109, "sha256": "bdef5026a5715f5a2b114580dd767a02bf35c4986bbffe496c4b89e85789eb98", "s3_last_modified": "2025-06-16T17:39:11Z" },
+        { "path": "data/2107_meter_15m_data_2025.csv", "bytes": 1770717, "sha256": "20fe6e7124bcd65715e69df0d8f5776019632c776cbe39fecb0d65908d9b14ff", "s3_last_modified": "2026-05-21T17:27:31Z" }
+      ]
+    },
+    "weather": {
+      "endpoint": "https://single-runs-api.open-meteo.com/v1/forecast",
+      "params": {
+        "models": "ecmwf_ifs",
+        "run": "<YYYY-MM-DD>T00:00",
+        "latitude": 38.996306,
+        "longitude": -122.134111,
+        "timezone": "UTC",
+        "wind_speed_unit": "ms",
+        "hourly": "shortwave_radiation,direct_normal_irradiance,diffuse_radiation,temperature_2m,wind_speed_10m,cloud_cover"
+      }
+    }
+  },
+  "weather_semantics": {
+    "dataset": "ECMWF IFS HRES 9 km, complete runs by initialisation time, Open-Meteo Single Runs API",
+    "docs": "https://open-meteo.com/en/docs/single-runs-api",
+    "units": {
+      "shortwave_radiation": "W/m2, mean over the hour ending at the timestamp",
+      "direct_normal_irradiance": "W/m2, mean over the hour ending at the timestamp",
+      "diffuse_radiation": "W/m2, mean over the hour ending at the timestamp",
+      "temperature_2m": "degC, instantaneous",
+      "wind_speed_10m": "m/s, instantaneous",
+      "cloud_cover": "%, instantaneous"
+    },
+    "coverage": {
+      "00z_runs_from": "2024-03-14",
+      "06z_runs_from": "between 2024-08-01 and 2024-08-15",
+      "run_length_hours": 168,
+      "first_hour_radiation_null": true
+    }
+  },
+  "fixtures": {
+    "fixtures/pvdaq_2107_meter_dst.csv": { "sha256": "71446c6799e706bfc90609f458e31aff7b5accfc0cf639c41ed676ef94e51818", "content": "PVDAQ 2107 meter rows for 2024-11-02..04 and 2025-03-08..10 (both DST changes)" },
+    "fixtures/ecmwf_ifs_2025-06-15T00.json": { "sha256": "4ee2bc7aa8a4b0d6b0007ad466d2838056ccbe5d605fe38c37655386009cfec2", "content": "one complete 00 UTC run at the PVDAQ 2107 location" }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "id": "elia-belgium-total",
+  "target": "Belgian photovoltaic production, Elia 'measured and upscaled', region Belgium, grid connection type Total (DSO + TSO)",
+  "timezone": "Europe/Brussels",
+  "label": "measured and upscaled",
+  "weather_points": {
+    "note": "One point per province: the provincial capital, except Luxembourg (a central point, 49.95 N 5.50 E, as Arlon sits on the border). Weighted by the province's Elia monitored capacity known at issuance.",
+    "provinces": [
+      { "ods209": "Antwerpen",      "ods032": "Antwerp",         "lat": 51.22, "lon": 4.40 },
+      { "ods209": "Brussel",        "ods032": "Brussels",        "lat": 50.85, "lon": 4.35 },
+      { "ods209": "OostVlaanderen", "ods032": "East-Flanders",   "lat": 51.05, "lon": 3.72 },
+      { "ods209": "VlaamsBrabant",  "ods032": "Flemish-Brabant", "lat": 50.88, "lon": 4.70 },
+      { "ods209": "Hainaut",        "ods032": "Hainaut",         "lat": 50.45, "lon": 3.95 },
+      { "ods209": "Limburg",        "ods032": "Limburg",         "lat": 50.93, "lon": 5.34 },
+      { "ods209": "Liege",          "ods032": "Liège",           "lat": 50.63, "lon": 5.57 },
+      { "ods209": "Luxembourg",     "ods032": "Luxembourg",      "lat": 49.95, "lon": 5.50 },
+      { "ods209": "Namur",          "ods032": "Namur",           "lat": 50.47, "lon": 4.87 },
+      { "ods209": "BrabantWallon",  "ods032": "Walloon-Brabant", "lat": 50.72, "lon": 4.61 },
+      { "ods209": "WestVlaanderen", "ods032": "West-Flanders",   "lat": 51.21, "lon": 3.22 }
+    ]
+  },
+  "regions_dropped_on_2026-10-26": ["Flanders", "Wallonia"],
+  "unknowns": [
+    "fleet orientation and tilt mix (needed by the aggregate physics baseline; an assumption in #4)",
+    "Elia's upscaling method and which sites are monitored",
+    "whether ods032 day-ahead values are exactly as published at the time",
+    "whether measured values are revised after publication (identical over the one day of ods209/ods210 overlap checked)"
+  ]
+}
