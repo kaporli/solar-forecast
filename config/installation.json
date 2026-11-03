@@ -1,0 +1,28 @@
+{
+  "id": "pvdaq-2107",
+  "source": "PVDAQ system metadata 2107_system_metadata.json (see data/manifest.json)",
+  "public_name": "Farm Solar Array",
+  "location": "Arbuckle, CA, USA",
+  "latitude": 38.996306,
+  "longitude": -122.134111,
+  "elevation_m": 10.0,
+  "timezone": "America/Los_Angeles",
+  "climate": "Csa",
+  "mount": "fixed ground mount, Schletter",
+  "tilt_deg": 25.0,
+  "azimuth_deg": 180.0,
+  "azimuth_convention": "compass degrees, 0 = north, clockwise, 180 = south (pvlib convention). Open-Meteo tilted irradiance uses 0 = south: subtract 180.",
+  "dc_capacity_kw": 892.8,
+  "dc_capacity_basis": "2880 x Hyundai HiS-M310TI (310 W), 24 module groups of 120; metadata states 893.0 kW",
+  "inverters": "24 x ABB TRIO-27.6-TL-OUTD-S1B string inverters",
+  "ac_limit_kw": null,
+  "ac_limit_note": "Not stated in the metadata. 24 x 27.6 kW nominal = 662.4 kW; the meter peaks at 707.84 kW (2025-02-08 11:45), above that sum, so the effective export limit is unknown.",
+  "commissioned": "modules start_on 2017-11-01; system started_on 2017-01-01",
+  "unknowns": [
+    "effective AC export limit",
+    "string layout (modules_per_string and num_strings are blank)",
+    "meter model (manufacturer Unknown)",
+    "cause of the two all-zero days 2024-10-18 and 2024-11-06",
+    "soiling and cleaning schedule"
+  ]
+}
