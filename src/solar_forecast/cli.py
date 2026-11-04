@@ -3,6 +3,8 @@
     uv run solar-data fetch belgium|pvdaq
     uv run solar-data build belgium|pvdaq [--inputs data/datasets/<experiment>-v1.json]
     uv run solar-data evaluate belgium|pvdaq
+    uv run solar-data compare belgium|pvdaq
+    uv run solar-data lock belgium
     uv run solar-data contract
 """
 from __future__ import annotations
@@ -228,7 +230,7 @@ def report(exp: F.Experiment, inputs, t: pd.DataFrame, feats: pd.DataFrame, mani
 def main(argv=None) -> None:
     p = argparse.ArgumentParser(prog="solar-data")
     sub = p.add_subparsers(dest="cmd", required=True)
-    for c in ("fetch", "build", "evaluate"):
+    for c in ("fetch", "build", "evaluate", "compare", "lock"):
         s = sub.add_parser(c)
         s.add_argument("experiment", choices=["belgium", "pvdaq"])
         if c == "fetch":
@@ -244,6 +246,12 @@ def main(argv=None) -> None:
     elif a.cmd == "evaluate":
         from .baseline_report import run
         run(a.experiment)
+    elif a.cmd == "compare":
+        from .model_report import run
+        run(a.experiment)
+    elif a.cmd == "lock":
+        from .model_report import lock
+        print(json.dumps(lock(a.experiment)["selection"], indent=1))
     else:
         sys.stdout.write(F.contract_markdown())
 
