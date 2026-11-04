@@ -13,7 +13,8 @@ from sklearn.ensemble import HistGradientBoostingRegressor
 
 EXTRA = ["physics_mwh"]
 
-# Declared before any validation result and not tuned on the validation folds.
+# Declared before any validation result and not tuned. Tuning on validation folds would be allowed, but those scores
+# would then need nested chronological validation to stay an unbiased estimate; the final test evaluates the lock.
 GBM_PARAMS = dict(loss="absolute_error", learning_rate=0.05, max_iter=400, max_leaf_nodes=31, min_samples_leaf=50,
                   l2_regularization=1.0, early_stopping=False, random_state=0)
 

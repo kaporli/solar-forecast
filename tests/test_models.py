@@ -90,3 +90,33 @@ def test_selection_rule():
     for c in ("gbm", "physics_residual_gbm"):
         p["vs_best_baseline"][c]["high"] = 0.2
     assert select(p, names)["selected"] == "persistence"  # nothing passes: the best baseline stays
+
+
+def test_lock_refuses_a_recipe_that_differs_from_the_evaluated_one(monkeypatch):
+    from solar_forecast import model_report as R
+
+    evaluated = R.recipe(M.GBM("gbm", M.ALL))
+    monkeypatch.setattr(M, "GBM_PARAMS", M.GBM_PARAMS | {"max_iter": 1})
+    assert R.recipe(M.GBM("gbm", M.ALL)) != evaluated
+    if (R.ROOT / "data/evaluation/belgium-models.json").exists():
+        with pytest.raises(SystemExit, match="recipe of gbm"):
+            R.lock("belgium")
+
+
+def test_interval_calibration_uses_only_labels_known_at_the_fold_start():
+    from solar_forecast.model_report import interval_check
+
+    rng = np.random.default_rng(1)
+    days = [D("2025-01-01") + pd.Timedelta(days=i) for i in range(40)]
+    sel = pd.DataFrame([{"target_date": d, "fold": "V1" if d <= D("2025-01-20") else "V2", "scored": True,
+                         "daylight": True, "local_hour": h, "lead_hours": 30 + h, "capacity": 1000.0,
+                         "ghi_clearsky": 500.0, "prediction": 400.0, "actual": 400.0 + rng.normal(0, 50)}
+                        for d in days for h in (10, 12)])
+    fs = [E.Fold("V1", D("2025-01-01"), D("2025-01-20")), E.Fold("V2", D("2025-01-21"), D("2025-02-09"))]
+    base = interval_check(sel, fs)
+    late = sel.copy()  # 2025-01-20 is in V1, but its labels are not complete at V2's first issuance (2025-01-20)
+    late.loc[late["target_date"] == D("2025-01-20"), "actual"] = 5000.0
+    assert interval_check(late, fs) == base
+    early = sel.copy()
+    early.loc[early["target_date"] == D("2025-01-19"), "actual"] = 5000.0  # known by then: it counts
+    assert interval_check(early, fs) != base

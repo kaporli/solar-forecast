@@ -4,6 +4,7 @@ data/evaluation/<experiment>-models.json and docs/evaluation/<experiment>-models
 touched; `solar-data lock belgium` records the selection before any test score exists."""
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import platform
@@ -76,9 +77,13 @@ INTERVAL_METHODS = {
 ACCEPT = 0.05  # a method is usable if coverage is within 5 points of nominal at every level and in every fold
 
 
-def interval_check(sel: pd.DataFrame, names: list[str]) -> dict:
-    """Chronological split conformal: for fold k, quantiles of the scaled load-factor residuals of folds before k
-    only (all out-of-sample). Coverage and width on scored daylight hours, overall, by fold and by lead hour."""
+def interval_check(sel: pd.DataFrame, fs: list) -> dict:
+    """Chronological residual-quantile intervals (not split conformal: residuals of different fold models are pooled
+    and plain interpolated quantiles are used, without a finite-sample rank correction). For fold k: quantiles of the
+    scaled load-factor residuals of earlier folds, restricted to labels known at fold k's first issuance (target
+    day <= fold start - label lag, as for model fitting). Coverage and width on scored daylight hours, overall, by
+    fold and by lead hour."""
+    names = [f.name for f in fs]
     r = sel[sel["scored"]].assign(res=lambda d: (d["actual"] - d["prediction"]) / d["capacity"])
     out = {}
     for method, (scale, group) in INTERVAL_METHODS.items():
@@ -86,8 +91,9 @@ def interval_check(sel: pd.DataFrame, names: list[str]) -> dict:
         for lv in LEVELS:
             lo_q, hi_q = (1 - lv) / 2, 1 - (1 - lv) / 2
             parts = []
-            for i, f in enumerate(names[1:], 1):
-                cal = r[r["fold"].isin(names[:i])]
+            for i, fold in enumerate(fs[1:], 1):
+                f = fold.name
+                cal = r[r["fold"].isin(names[:i]) & (r["target_date"] <= E.train_end(fold))]
                 z = (cal["res"] / scale(cal)).rename("z")
                 cal = cal.assign(z=z)[np.isfinite(z)]
                 t = r[r["fold"] == f]
@@ -159,6 +165,7 @@ def run(name: str) -> dict:
            "dataset_manifest": {"file": str(man_path.relative_to(ROOT)), "sha256": _sha(man_path)},
            "protocol": {"file": "config/evaluation.json", "sha256": _sha(ROOT / "config/evaluation.json")},
            "hardware": hardware(), "gbm_params": M.GBM_PARAMS, "fit_seconds_all_folds": fit_seconds,
+           "fingerprint": fingerprint(), "recipes": {c.name: recipe(c) for c in cands},
            "splits": E.split_manifest(ex, fs), "candidates": [c.name for c in cands], "ablation": [c.name for c in abl],
            "test_period": E.CONFIG["experiments"][name]["test"] | {"scored": False}, "results": {}}
     res["resources"] = {}
@@ -186,7 +193,7 @@ def run(name: str) -> dict:
     res["selection"] = select(prim, names)
     res["selection"]["applies_to"] = primary_kind
     sel = rows[res["selection"]["selected"]]
-    res["intervals"] = {kind: interval_check(sel[sel["kind"] == kind], names) for kind in res["results"]}
+    res["intervals"] = {kind: interval_check(sel[sel["kind"] == kind], fs) for kind in res["results"]}
     out = ROOT / "data/evaluation"
     (out / f"{name}-models.json").write_text(json.dumps(res, indent=1, default=str) + "\n")
     (ROOT / f"docs/evaluation/{name}-models.md").write_text(report(exp, res))
@@ -230,7 +237,9 @@ def report(exp: F.Experiment, res: dict) -> str:
          "local hour, lead time and persistence load factor.",
          "- `physics_residual_gbm`: calibrated physics plus trees on the remaining load factor, with the physics load "
          "factor as an extra input; the calibration is refitted inside each fold.",
-         f"- Tree settings, fixed before validation and not tuned: `{json.dumps(res['gbm_params'])}`.", ""]
+         f"- Tree settings, fixed before validation and not tuned: `{json.dumps(res['gbm_params'])}`. Tuning on the "
+         "validation folds would be allowed, but its scores would then no longer be an unbiased estimate (that needs "
+         "nested chronological validation); the untouched final test evaluates the locked selection.", ""]
     names = [s["fold"] for s in res["splits"]]
     for kind, k in res["results"].items():
         L += [f"## {kind}{' (primary)' if kind == primary else ''}", "",
@@ -268,8 +277,10 @@ def report(exp: F.Experiment, res: dict) -> str:
     L += [f"| {c} | {v['inputs']} | {v['artifact_mb']:.2f} | {v['load_s']:.3f} | {v['predict_s']:.4f} | {v['peak_rss_mb']:.0f} | "
           f"{v['fit_s_refit_recipe']:.1f} |" for c, v in res["resources"].items()]
     L += ["", "## Prediction intervals (chronological check)", "",
-          "Split conformal on load-factor residuals of the selected model, scaled as named; for each fold the quantiles "
-          "come from earlier folds only. Daylight scored hours of the evaluated folds; hourly only, no daily intervals. "
+          "Chronological residual-quantile intervals for the selected model: quantiles of its load-factor residuals, "
+          "scaled as named, from earlier folds and only from labels known at the fold's first issuance. This is not "
+          "split conformal prediction (residuals of different fold models are pooled, plain quantiles, no finite-sample "
+          "correction). Daylight scored hours of the evaluated folds; hourly only, no daily intervals. "
           f"A method is usable only if coverage is within {ACCEPT * 100:.0f} points of nominal at both levels in every "
           "fold.", ""]
     for kind, iv in res["intervals"].items():
@@ -284,8 +295,10 @@ def report(exp: F.Experiment, res: dict) -> str:
         L.append("")
     frozen = {k: v["frozen"] for k, v in res["intervals"].items()}
     L.append("Result: " + ("; ".join(f"{k}: {v}" for k, v in frozen.items() if v) if any(frozen.values()) else
-             "no method is usable. No interval method is frozen and no public uncertainty bands are published; "
-             "with at most one year of chronological validation, each season is calibrated on other seasons."))
+             "none of these methods is usable, so none is frozen and the forecast is published without uncertainty "
+             "bands: prediction intervals have not been validated. With at most one year of chronological validation, "
+             "each season is calibrated on other seasons. This rules out these residual-quantile intervals, not "
+             "conformal prediction in general."))
     L += ["", "## Limitations", "",
           f"- Validation spans {res['splits'][0]['start']} to {res['splits'][-1]['end']}: each season appears at most "
           "once; season-specific conclusions are not drawn.",
@@ -298,40 +311,75 @@ def report(exp: F.Experiment, res: dict) -> str:
     return "\n".join(L) + "\n"
 
 
+def recipe(c) -> dict:
+    """What a candidate is, as evaluated: class, input groups, inputs, residual flag and tree settings."""
+    return json.loads(json.dumps({"class": type(c).__name__, "name": c.name, "groups": getattr(c, "groups", None),
+                                  "inputs": c.inputs, "physics": getattr(c, "physics", None),
+                                  "residual": getattr(c, "residual", None), "params": getattr(c, "params", None)},
+                                 default=str))
+
+
+def fingerprint() -> dict:
+    """Implementation and dependency identity: SHA-256 over every module of the package, uv.lock, and the versions
+    of the libraries the candidates run on."""
+    from importlib.metadata import version
+
+    h = hashlib.sha256()
+    for f in sorted((ROOT / "src/solar_forecast").glob("*.py")):
+        h.update(f.name.encode() + b"\0" + f.read_bytes() + b"\0")
+    libs = ["numpy", "pandas", "scikit-learn", "pvlib", "pyarrow", "joblib"]
+    return {"src_sha256": h.hexdigest(), "uv_lock_sha256": _sha(ROOT / "uv.lock"),
+            "python": platform.python_version(), "versions": {k: version(k) for k in libs}}
+
+
 def lock(name: str) -> dict:
-    """Record the selection before the final test: candidate, inputs, settings, output constraints, refit recipe,
-    test-period baselines and the checksums of everything it rests on. Refuses a comparison built from
-    uncommitted code or from another dataset or protocol than the current ones."""
+    """Record the selection before the final test, from what the comparison evaluated: the candidate's recorded
+    recipe, output constraints, refit recipe, final-test comparators and the checksums it rests on. Refuses if the
+    comparison came from uncommitted code, or if the dataset, protocol, implementation, dependencies or the
+    candidate's recipe differ now from when it was evaluated."""
     path = ROOT / f"data/evaluation/{name}-models.json"
     res = json.loads(path.read_text())
     man = ROOT / res["dataset_manifest"]["file"]
-    if res["code_dirty"] or _sha(man) != res["dataset_manifest"]["sha256"] or \
-            _sha(ROOT / "config/evaluation.json") != res["protocol"]["sha256"]:
-        raise SystemExit("comparison is not from committed code, the current dataset and the current protocol: rerun compare")
+    drift = []
+    if res["code_dirty"]:
+        drift.append("comparison built from uncommitted code")
+    if _sha(man) != res["dataset_manifest"]["sha256"]:
+        drift.append("dataset manifest")
+    if _sha(ROOT / "config/evaluation.json") != res["protocol"]["sha256"]:
+        drift.append("protocol")
+    if fingerprint() != res.get("fingerprint"):
+        drift.append("implementation or dependencies (fingerprint)")
     sel = res["selection"]["selected"]
-    cand = {c.name: c for c in M.candidates()}.get(sel)
+    current = {c.name: recipe(c) for c in M.candidates()}
+    evaluated = res.get("recipes", {})
+    if sel in current and current.get(sel) != evaluated.get(sel):
+        drift.append(f"recipe of {sel}")
+    if drift:
+        raise SystemExit("cannot lock, changed since the comparison: " + "; ".join(drift) + ". Rerun compare.")
     test = E.folds(name, include_test=True)[-1]
+    model = evaluated.get(sel)
     out = {
         "experiment": name, "locked_at": datetime.now(timezone.utc).isoformat(), "selected": sel,
         "selection": res["selection"],
-        "model": None if cand is None else {
-            "class": type(cand).__name__, "groups": getattr(cand, "groups", None), "inputs": cand.inputs,
-            "residual": getattr(cand, "residual", False), "params": getattr(cand, "params", None),
+        "model": None if model is None else model | {
             "target": "load factor: actual / capacity known at issuance; prediction x capacity",
-            "seed": M.GBM_PARAMS["random_state"]},
+            "seed": (model.get("params") or {}).get("random_state")},
         "postprocessing": E.CONFIG["scoring"]["postprocessing"],
         "refit_recipe": {"train_rule": E.CONFIG["training"]["rule"], "last_target": str(E.train_end(test)),
                          "first_target": E.CONFIG["training"]["first_target"],
-                         "rows": "target eligible, weather_complete, capacity_complete"},
+                         "rows": "target eligible, weather_complete, capacity_complete",
+                         "applies_to": "the selected candidate and every fitted comparator"},
         "final_test": {"start": str(test.start), "end": str(test.end), "kinds": "all; primary " +
                        E.CONFIG["experiments"][name]["primary_kind"],
-                       "reported_with": ["persistence", "physics"] + (["elia"] if name == "belgium" else []),
+                       "reported_with": ["persistence", "physics", "physics_calibrated"]
+                       + (["elia"] if name == "belgium" else []),
+                       "comparator_recipes": {c: evaluated[c] for c in ("physics_calibrated",) if c in evaluated and c != sel},
                        "slices": E.CONFIG["experiments"][name]["test_slices"],
                        "runs": "once; no tuning, switching or rerun with other settings against the test"},
         "intervals": res["intervals"][E.CONFIG["experiments"][name]["primary_kind"]]["frozen"],
         "references": {"comparison": {"file": str(path.relative_to(ROOT)), "sha256": _sha(path)},
                        "code_commit": res["code_commit"], "dataset_manifest": res["dataset_manifest"],
-                       "protocol": res["protocol"], "uv_lock_sha256": _sha(ROOT / "uv.lock")},
+                       "protocol": res["protocol"], "fingerprint": res["fingerprint"]},
     }
     (ROOT / f"config/lock-{name}.json").write_text(json.dumps(out, indent=1, default=str) + "\n")
     return out
