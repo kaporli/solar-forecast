@@ -20,10 +20,20 @@ separate installation-level experiment; its results do not validate the Belgian 
    - the interval decision;
    - the SHA-256 of the comparison results, dataset manifest, protocol and `uv.lock`.
 3. **Review.** The lock is merged before any test score exists.
-4. **Final test** (separate change, after the lock is merged). The test runs once for the locked candidate with
-   the refit recipe, together with persistence, physics, `physics_calibrated` and Elia. A disappointing result is reported as it is;
-   nothing is tuned, switched or rerun against the test. Packaging and parity fixtures follow from the same
-   refit.
+4. **Final test** (`uv run python -m solar_forecast.final_test belgium`, after the lock was merged). It runs once
+   for the locked candidate with the refit recipe, together with persistence, physics, `physics_calibrated` and
+   Elia. Before scoring it refuses if any module present at the lock's code commit, `uv.lock`, the Python or
+   library versions, the dataset, the protocol or a recipe has changed, if the code is uncommitted, or if results
+   already exist. A disappointing result is reported as it is; nothing is tuned, switched or rerun against the
+   test. `--rehearse <dir>` runs the same code on the last validation fold, which reproduces that fold's recorded
+   scores. Results: `docs/evaluation/belgium-test.md` and `data/evaluation/belgium-test.json`.
+5. **Artifact** (`artifacts/belgium/`, written by the same run from the same fit): `model.joblib`, `manifest.json`
+   (input schema and feature version, recipe, seed, output clipping, training window, code commit, lock, dataset,
+   protocol, `uv.lock` and library versions, checksums) and `fixtures.parquet` (feature rows of three test days,
+   including the 25-hour day of 2026-10-25, with the predictions of the scored run). `solar_forecast.artifact`
+   loads it, refusing a changed checksum or other library versions, and predicts with the output clipping;
+   `tests/test_final_test.py` checks reload parity on the fixtures. The fixtures start from feature rows: parity
+   of feature construction from live inputs belongs to #6.
 
 ## Candidates
 
