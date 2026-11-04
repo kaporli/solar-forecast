@@ -89,3 +89,18 @@ def test_tampered_snapshot_rejected(tmp_path):
     p.write_bytes(b"changed")
     with pytest.raises(ValueError, match="checksum"):
         sources.read_verified(sources.snapshots("elia", tmp_path)[0])
+
+
+def test_get_does_not_retry_permanent_client_errors(monkeypatch):
+    import urllib.error
+    calls = []
+
+    def fail(url, timeout):
+        calls.append(url)
+        raise urllib.error.HTTPError(url, 400, "Bad Request", {}, None)
+
+    monkeypatch.setattr(sources.urllib.request, "urlopen", fail)
+    monkeypatch.setattr(sources.time, "sleep", lambda s: None)
+    with pytest.raises(urllib.error.HTTPError):
+        sources.get("https://example.invalid")
+    assert len(calls) == 1

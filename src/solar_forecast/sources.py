@@ -10,6 +10,7 @@ import hashlib
 import io
 import json
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
@@ -41,8 +42,8 @@ def get(url: str) -> bytes:
         try:
             with urllib.request.urlopen(url, timeout=300) as r:
                 return r.read()
-        except Exception:
-            if attempt == 5:
+        except Exception as e:  # a 4xx other than 429 is permanent, e.g. a run Open-Meteo never published
+            if attempt == 5 or (isinstance(e, urllib.error.HTTPError) and 400 <= e.code < 500 and e.code != 429):
                 raise
             time.sleep(10 * 2 ** attempt)
 
