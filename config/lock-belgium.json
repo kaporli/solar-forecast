@@ -1,6 +1,6 @@
 {
  "experiment": "belgium",
- "locked_at": "2026-11-04T10:57:33.152089+00:00",
+ "locked_at": "2026-11-04T11:48:39.646605+00:00",
  "selected": "gbm",
  "selection": {
   "best_baseline": "physics",
@@ -33,6 +33,7 @@
  },
  "model": {
   "class": "GBM",
+  "name": "gbm",
   "groups": [
    "irradiance",
    "temperature_cloud",
@@ -57,6 +58,7 @@
    "lead_hours",
    "persistence_lf"
   ],
+  "physics": false,
   "residual": false,
   "params": {
    "loss": "absolute_error",
@@ -76,7 +78,8 @@
   "train_rule": "a model for a fold is fitted once, before the fold's first issuance, on target days <= fold start - label_lag_days; expanding window; no refit inside a fold",
   "last_target": "2025-10-30",
   "first_target": "2024-03-15",
-  "rows": "target eligible, weather_complete, capacity_complete"
+  "rows": "target eligible, weather_complete, capacity_complete",
+  "applies_to": "the selected candidate and every fitted comparator"
  },
  "final_test": {
   "start": "2025-11-01",
@@ -85,8 +88,22 @@
   "reported_with": [
    "persistence",
    "physics",
+   "physics_calibrated",
    "elia"
   ],
+  "comparator_recipes": {
+   "physics_calibrated": {
+    "class": "CalibratedPhysics",
+    "name": "physics_calibrated",
+    "groups": null,
+    "inputs": [
+     "physics_lf"
+    ],
+    "physics": null,
+    "residual": null,
+    "params": null
+   }
+  },
   "slices": [
    "before 2026-10-26 (ods032)",
    "from 2026-10-26 (ods209)"
@@ -97,9 +114,9 @@
  "references": {
   "comparison": {
    "file": "data/evaluation/belgium-models.json",
-   "sha256": "dbc5c6452466e8f08a6411909fce4a7383a88b5b90417c3e30b16397507aa574"
+   "sha256": "1d383a286062562703d486a12047334b5a3ef15c008456fe9318a5606c494298"
   },
-  "code_commit": "58e64ac8ecf1cba2fddb2155388adb884a6833dc",
+  "code_commit": "307202a7ce4024922d266cac1d9afcbedcdcb54f",
   "dataset_manifest": {
    "file": "data/datasets/belgium-v1.json",
    "sha256": "0d5f4c681c34e5a985a83a5989352cae365b1de96bf0b0fcb0196485c88dee0c"
@@ -108,6 +125,18 @@
    "file": "config/evaluation.json",
    "sha256": "b12ed98577f75321d7fd1ce855da15614e8b141c0568bbaa36c5bae5b7e215d3"
   },
-  "uv_lock_sha256": "8768ea74cf8ba9ce82b73305d03d3ee40531fac52e2cd204843d382aff97fae4"
+  "fingerprint": {
+   "src_sha256": "8116765454842dfd185f992a10ea64684b1e913c3f6211dff2ad493870309e6a",
+   "uv_lock_sha256": "8768ea74cf8ba9ce82b73305d03d3ee40531fac52e2cd204843d382aff97fae4",
+   "python": "3.13.7",
+   "versions": {
+    "numpy": "2.5.4",
+    "pandas": "3.1.0",
+    "scikit-learn": "1.9.1",
+    "pvlib": "0.16.1",
+    "pyarrow": "26.0.1",
+    "joblib": "1.6.0"
+   }
+  }
  }
 }
