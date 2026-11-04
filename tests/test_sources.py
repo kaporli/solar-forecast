@@ -104,3 +104,28 @@ def test_get_does_not_retry_permanent_client_errors(monkeypatch):
     with pytest.raises(urllib.error.HTTPError):
         sources.get("https://example.invalid")
     assert len(calls) == 1
+
+
+def test_pinned_rebuild_refuses_a_changed_sidecar(store, monkeypatch):
+    from solar_forecast import cli
+    run = pd.Timestamp("2024-03-17", tz="UTC")
+    store("weather-belgium", "20240317T00", "json", run_json(run), "2024-03-17 08:00Z", run=run.isoformat())
+    m = sources.snapshots("weather-belgium", store.path)[0]
+    real = sources.snapshots
+    monkeypatch.setattr(cli.sources, "snapshots", lambda s: real(s, store.path))
+    monkeypatch.setattr(cli, "_rel", str)
+    pinned = {"inputs": [{"source": "weather-belgium", "file": str(m["path"]), "sha256": m["sha256"],
+                          "sidecar_sha256": m["sidecar_sha256"]}]}
+    assert len(cli._select("weather-belgium", pinned)) == 1
+    meta = json.loads(m["sidecar"].read_text())
+    meta["retrieved_at"] = "2024-03-17T10:30:00+00:00"  # after the issuance: availability would change
+    m["sidecar"].write_text(json.dumps(meta))
+    with pytest.raises(SystemExit, match="sidecar differs"):
+        cli._select("weather-belgium", pinned)
+
+
+def test_report_period_follows_the_weather_run():
+    from solar_forecast.cli import period
+    assert period(pd.Timestamp("2024-11-11 06:00Z")).startswith("hindcast")  # used for target day 2024-11-12
+    assert period(pd.Timestamp("2024-11-12 00:00Z")).startswith("runs from")
+    assert period(pd.NaT) == "no run"

@@ -22,7 +22,7 @@ uv run tools/check_sources.py          # re-run the feasibility checks
 ```
 
 Snapshots land in `data/raw/snapshots/` (not committed) and are never overwritten; the dataset manifest in
-`data/datasets/` lists each one with its SHA-256, so a rebuild from the same snapshots gives the same
+`data/datasets/` lists each one with the SHA-256 of its payload and sidecar, so a rebuild from the same snapshots gives the same
 content hashes.
 
 ## Attribution

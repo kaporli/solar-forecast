@@ -7,8 +7,9 @@ Decisions for #3, applied by `uv run solar-data build <experiment>`. Column defi
 
 - Every retrieval is an append-only snapshot in `data/raw/snapshots/<source>/` with a sidecar (request,
   SHA-256, `request_started_at`, `retrieved_at`). The build reads only snapshots and verifies each checksum.
-- The dataset manifest `data/datasets/<experiment>-v1.json` lists every snapshot used. `--inputs` rebuilds from
-  exactly those and refuses a missing or changed file.
+- The dataset manifest `data/datasets/<experiment>-v1.json` lists every snapshot used with the SHA-256 of its
+  payload and of its sidecar. The sidecar decides availability (`retrieved_at`) and identity (run, dataset), so
+  `--inputs` rebuilds from exactly those and refuses a missing file or a changed payload or sidecar.
 - Elia: ods032 (Belgium and the 11 provinces from 2024-03-01), ods209 and ods210 (grid connection Total). When
   snapshots overlap, the archive datasets take precedence over ods210 and newer retrievals over older ones,
   column by column, so an Elia forecast that ods209 lacks can still come from an ods210 snapshot.
@@ -26,7 +27,9 @@ Decisions for #3, applied by `uv run solar-data build <experiment>`. Column defi
 - `night_zero_estimate` is 0.0 for an unobserved hour with the sun's upper limb below the horizon at both ends
   of the hour at every point. It is a separate column and never counts as observed.
 - `day_complete`: every hour of the local day observed. Daily metrics use only such days.
-- Neither source is a cumulative meter, so there is no differencing, first-reading or reset handling.
+- Neither source is a cumulative meter (both give interval-average power), so cumulative differencing,
+  first-reading handling and counter-reset tests are not applicable (agreed in review of #9). Gap, duplicate,
+  unit and DST handling apply.
 - Curtailment and clipping are not detectable from these sources and are not excluded: they are part of what
   was produced. PVDAQ's effective AC limit stays unknown (`config/installation.json`).
 - PVDAQ fall-back labels (01:00 to 01:45 on 2024-11-03 and 2025-11-02) occur once and could belong to either
@@ -38,8 +41,10 @@ Decisions for #3, applied by `uv run solar-data build <experiment>`. Column defi
   replay call it for every issuance; inference calls it once with `live=True`, which drops every snapshot
   retrieved after the issuance and falls back to the latest earlier run (`weather_availability = fallback`)
   if the rule's run was not retrieved in time. Tests check that both paths give identical rows.
-- Weather is weighted by monitored capacity per province known at the cutoff. Per-province features are not in
-  v1; #5 may add them if validation supports it.
+- Weather is weighted by monitored capacity per province known at the cutoff. National capacity and all 11
+  province capacities must be known and positive; otherwise `capacity_complete` is false and weather and solar
+  geometry are null, never re-weighted over the remaining provinces. Per-province features are not in v1; #5 may
+  add them if validation supports it.
 - Solar geometry is computed (pvlib) at the capacity-weighted centroid, replacing the legacy sunrise table.
 - Persistence is a feature as well as the #4 baseline, built from eligible hours that ended before the cutoff.
 - Models predict load factor (target / capacity) and are scored in MWh or kWh, because Belgian monitored

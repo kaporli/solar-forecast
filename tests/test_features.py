@@ -112,3 +112,16 @@ def test_contract_types_and_generated_doc(store):
         if dtype not in ("date",):
             assert str(f[c].dtype) == dtype, c
     assert (ROOT / "docs/feature-contract.md").read_text() == F.contract_markdown()
+
+
+def test_missing_province_capacity_is_not_reweighted(store):
+    antwerp = sources.config("belgium")["weather_points"]["provinces"][0]["ods032"]
+    body = pd.read_csv(__import__("io").BytesIO(elia_csv("2024-03-05", "2024-03-17 09:30")))
+    body = body[body["region"] != antwerp].to_csv(index=False).encode()
+    store("elia", "ods032_belgium", "csv", body, "2024-03-17 09:45Z", dataset="ods032")
+    run = pd.Timestamp("2024-03-17", tz="UTC")
+    store("weather-belgium", "20240317T00", "json", run_json(run), "2024-03-17 08:00Z", run=run.isoformat())
+    f = F.features_for_issuance(EXP, inputs(store.path), TARGET, "11h")
+    assert not f["capacity_complete"].any() and not f["weather_complete"].any()
+    assert f[["shortwave_radiation", "cos_zenith", "ghi_clearsky"]].isna().all().all()
+    assert (f["weather_availability"] == "recorded").all() and (f["capacity"] == 1000.0).all()

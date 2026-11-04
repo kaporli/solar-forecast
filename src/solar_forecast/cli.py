@@ -25,7 +25,7 @@ ROOT = sources.ROOT
 BUILD = ROOT / "data/build"
 DATASETS = ROOT / "data/datasets"
 QUALITY = ROOT / "docs/quality"
-SPLIT = pd.Timestamp("2024-11-12").date()  # 49r1 operational at ECMWF; earlier runs are hindcasts
+SPLIT = pd.Timestamp("2024-11-12", tz="UTC")  # 49r1 operational at ECMWF; runs initialised earlier are hindcasts
 
 
 def experiment(name: str) -> F.Experiment:
@@ -67,13 +67,17 @@ def _select(source: str, pinned: dict | None) -> list[dict]:
     metas = sources.snapshots(source)
     if pinned is None:
         return metas
-    want = {e["file"]: e["sha256"] for e in pinned["inputs"] if e["source"] == source}
+    want = {e["file"]: e for e in pinned["inputs"] if e["source"] == source}
     got = [m for m in metas if _rel(m["path"]) in want]
     if len(got) != len(want):
         raise SystemExit(f"{source}: {len(want) - len(got)} pinned snapshots are not in data/raw/snapshots")
     for m in got:
-        if m["sha256"] != want[_rel(m["path"])]:
-            raise SystemExit(f"{m['path']}: sidecar checksum differs from the manifest")
+        e = want[_rel(m["path"])]
+        if m["sha256"] != e["sha256"]:
+            raise SystemExit(f"{m['path']}: payload checksum differs from the manifest")
+        # the sidecar decides availability (retrieved_at) and identity (run, dataset): pinned byte for byte
+        if m["sidecar_sha256"] != e.get("sidecar_sha256"):
+            raise SystemExit(f"{m['sidecar']}: sidecar differs from the manifest")
     return got
 
 
@@ -115,6 +119,7 @@ def build(name: str, inputs_file: str | None) -> None:
             f"data/build/{name}-{F.FEATURE_VERSION}/features.parquet": {"rows": len(feats), "content_sha256": content_hash(feats)},
         },
         "inputs": [{"source": m["source"], "name": m["name"], "file": _rel(m["path"]), "sha256": m["sha256"],
+                    "sidecar": _rel(m["sidecar"]), "sidecar_sha256": m["sidecar_sha256"],
                     "retrieved_at": m["retrieved_at"]} for m in used],
     }
     DATASETS.mkdir(parents=True, exist_ok=True)
@@ -138,6 +143,13 @@ def _ranges(days) -> str:
         if d is not None:
             start = prev = d
     return ", ".join(out)
+
+
+def period(run) -> str:
+    """Provenance period of a row, from the initialisation of its weather run."""
+    if pd.isna(run):
+        return "no run"
+    return "hindcast runs (initialised before 2024-11-12 00Z)" if run < SPLIT else "runs from 2024-11-12 00Z"
 
 
 def report(exp: F.Experiment, inputs, t: pd.DataFrame, feats: pd.DataFrame, manifest: dict) -> str:
@@ -189,17 +201,21 @@ def report(exp: F.Experiment, inputs, t: pd.DataFrame, feats: pd.DataFrame, mani
         missing = sorted(set(g.loc[g["weather_availability"] == "missing", "target_date"]))
         lines.append(f"- {kind}: {len(per)} issuances, availability {per.value_counts().to_dict()}; "
                      f"target days without a run: {_ranges(missing)}.")
+    bad = feats.loc[~feats["capacity_complete"]]
+    lines.append(f"- Capacity incomplete at the cutoff (weather and solar geometry null): "
+                 f"{bad['issuance_utc'].nunique()} issuances; target days: {_ranges(sorted(set(bad['target_date'])))}.")
     lines += ["", "## Usable examples", "",
-              "Usable: target hour eligible, weather complete, persistence available. Days usable: every hour usable.", "",
+              "Usable: target hour eligible, weather complete, persistence available. Days usable: every hour usable. "
+              "Period: by the initialisation of the weather run used, not the target day.", "",
               "| Kind | Period | Issuances | Rows | Eligible | Weather complete | Persistence | Usable | Days usable | Persistence not from D-2 |",
               "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
     ex = F.examples(feats, t[["hour_utc", "local_date", "local_hour", "eligible"]])
     ex["usable"] = ex["eligible"].fillna(False).astype(bool) & ex["weather_complete"] & ex["persistence_lf"].notna()
-    ex["period"] = ["hindcast runs (before 2024-11-12)" if d < SPLIT else "from 2024-11-12" for d in ex["target_date"]]
-    for (kind, period), g in ex.groupby(["kind", "period"], sort=False):
+    ex["period"] = ex["weather_run_utc"].map(period)
+    for (kind, per), g in ex.groupby(["kind", "period"], sort=False):
         d2 = sum(1 for d, s in zip(g["target_date"], g["persistence_source_date"])
                  if s is not None and (d - s).days != 2)
-        lines.append(f"| {kind} | {period} | {g['issuance_utc'].nunique()} | {len(g)} | "
+        lines.append(f"| {kind} | {per} | {g['issuance_utc'].nunique()} | {len(g)} | "
                      f"{int(g['eligible'].fillna(False).sum())} | {int(g['weather_complete'].sum())} | "
                      f"{int(g['persistence_lf'].notna().sum())} | {int(g['usable'].sum())} | "
                      f"{int(g.groupby('target_date')['usable'].all().sum())} | {d2} |")

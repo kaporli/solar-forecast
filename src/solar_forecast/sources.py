@@ -83,12 +83,12 @@ def fetch(source: str, name: str, ext: str, url: str, extra: dict, check=None, s
 
 
 def snapshots(source: str, store: Path = STORE) -> list[dict]:
-    """Sidecars of one source, with `path`, oldest first."""
+    """Sidecars of one source, with `path` (payload), `sidecar` and `sidecar_sha256`, oldest first."""
     out = []
     for p in sorted((store / source).glob("*.meta.json")):
         meta = json.loads(p.read_text())
         if "file" in meta:
-            out.append({**meta, "path": p.parent / meta["file"]})
+            out.append({**meta, "path": p.parent / meta["file"], "sidecar": p, "sidecar_sha256": sha256(p.read_bytes())})
     return sorted(out, key=lambda m: m["retrieved_at"])
 
 

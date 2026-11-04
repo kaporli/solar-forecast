@@ -2,7 +2,8 @@
 
 Every row is computed from inputs permitted at its issuance (docs/forecast-protocol.md):
 - actuals: only hours ending at or before the experiment's cutoff;
-- capacity: the value on the latest quarter-hour at or before the cutoff;
+- capacity: the value on the latest quarter-hour at or before the cutoff, national and for every point; if any is
+  missing or not positive, `capacity_complete` is false and weather and solar geometry are null (no re-weighting);
 - weather: the run named by the issuance rule.
 `live=True` additionally drops every snapshot retrieved after the issuance and falls back to the latest
 earlier run if the rule's run was not retrieved in time. Rows are row-local: no statistic is computed across
@@ -43,6 +44,7 @@ CONTRACT = {
     "weather_retrieved_at": ("datetime64[ns, UTC]", "", "retrieval of the weather snapshot used; NaT if none"),
     "lead_hours": ("float64", "h", "s minus the run initialisation; NaN if no run"),
     "capacity": ("float64", "MW (belgium), kW (pvdaq)", "monitored capacity known at the cutoff (belgium), DC capacity (pvdaq)"),
+    "capacity_complete": ("bool", "", "national capacity and every point's weight known and positive at the cutoff; if false, weather and solar geometry are null"),
     "persistence_lf": ("float64", "1", "load factor of the same local clock hour on D-2, else the latest earlier day up to D-8 where it is eligible and ended before the cutoff; NaN if none"),
     "persistence_source_date": ("date", "", "local day the persistence value came from; NaT if none"),
     "shortwave_radiation": ("float64", "W/m2", "GHI, mean of the hour, label s + 1h; capacity-weighted over points"),
@@ -173,11 +175,11 @@ class BelgiumInputs:
         return {k: g.set_index("datetime")["capacity_mw"].sort_index() for k, g in r.groupby("region")}
 
     def capacity(self, as_of, cutoff) -> tuple[float, pd.Series]:
+        """National capacity and per-province capacity (weather point order); NaN where none is known."""
         s = self._capacity_series(as_of)
         last = cutoff - pd.Timedelta(minutes=15)  # a quarter-hour starting at `last` ends at the cutoff
         at = lambda k: (s[k].loc[:last].iloc[-1] if k in s and len(s[k].loc[:last]) else np.nan)
-        w = pd.Series([at(k) for k in self.region_order], dtype=float)
-        return at("Belgium"), w / w.sum()
+        return at("Belgium"), pd.Series([at(k) for k in self.region_order], dtype=float)
 
 
 class PvdaqInputs:
@@ -223,7 +225,10 @@ def features_for_issuance(exp: Experiment, inputs, target_date, kind: str, live:
     as_of = issuance if live else None
     hours = day_hours(target_date, exp.tz)
     cutoff = exp.cutoff(issuance)
-    capacity, weights = inputs.capacity(as_of, cutoff)
+    capacity, per_point = inputs.capacity(as_of, cutoff)
+    capacity_complete = bool(np.isfinite(capacity) and capacity > 0 and len(per_point) == len(exp.points)
+                             and np.isfinite(per_point).all() and (per_point > 0).all())
+    weights = per_point / per_point.sum() if capacity_complete else None
     target_day = pd.Timestamp(target_date).date()
 
     run = rule_run(exp, issuance, kind)
@@ -235,21 +240,21 @@ def features_for_issuance(exp: Experiment, inputs, target_date, kind: str, live:
         fb = inputs.weather.latest_before(run, as_of)
         if fb:
             run, got, availability = fb[0], fb[1], "fallback"
-    if got:
-        per_point = hour_weather(got[0], hours)
-        w = per_point.index.get_level_values("point").map(weights).to_numpy()[:, None]
-        vals = pd.DataFrame(per_point[WEATHER].to_numpy() * w, index=per_point.index, columns=WEATHER)
+    wx = pd.DataFrame(np.nan, index=hours, columns=WEATHER)
+    if got and capacity_complete:
+        pw = hour_weather(got[0], hours)
+        w = pw.index.get_level_values("point").map(weights).to_numpy()[:, None]
+        vals = pd.DataFrame(pw[WEATHER].to_numpy() * w, index=pw.index, columns=WEATHER)
         g_sum = vals.groupby(level="hour_utc").sum(min_count=1)
-        g_n = per_point[WEATHER].notna().groupby(level="hour_utc").sum()
+        g_n = pw[WEATHER].notna().groupby(level="hour_utc").sum()
         wx = g_sum.where(g_n == len(exp.points)).reindex(hours)
-        retrieved = got[1]
-    else:
-        wx = pd.DataFrame(np.nan, index=hours, columns=WEATHER)
-        run, retrieved = pd.NaT, pd.NaT
+    retrieved = got[1] if got else pd.NaT
+    if not got:
+        run = pd.NaT
 
-    lat = float(np.dot(weights, [p[0] for p in exp.points]))
-    lon = float(np.dot(weights, [p[1] for p in exp.points]))
-    if np.isfinite(lat):
+    if capacity_complete:
+        lat = float(np.dot(weights, [p[0] for p in exp.points]))
+        lon = float(np.dot(weights, [p[1] for p in exp.points]))
         sun = solar(hours, [lat], [lon]).droplevel("point")
     else:
         sun = pd.DataFrame(np.nan, index=hours, columns=["cos_zenith", "solar_azimuth_deg", "ghi_clearsky"])
@@ -275,7 +280,7 @@ def features_for_issuance(exp: Experiment, inputs, target_date, kind: str, live:
         "actuals_cutoff_utc": cutoff, "weather_run_utc": run, "weather_availability": availability,
         "weather_retrieved_at": retrieved,
         "lead_hours": ((hours - run) / HOUR) if got else np.nan,
-        "capacity": capacity, "persistence_lf": pers, "persistence_source_date": src,
+        "capacity": capacity, "capacity_complete": capacity_complete, "persistence_lf": pers, "persistence_source_date": src,
     })
     for c in WEATHER:
         f[c] = wx[c].to_numpy()
