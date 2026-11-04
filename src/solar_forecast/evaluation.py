@@ -88,9 +88,11 @@ def training_rows(ex: pd.DataFrame, fold: Fold, cfg: dict = CONFIG) -> pd.DataFr
     return ex[keep]
 
 
-def backtest(candidate, ex: pd.DataFrame, fs: list[Fold], cfg: dict = CONFIG, unlock_test: bool = False) -> pd.DataFrame:
-    """Fit once per fold on `training_rows`, predict every row of the fold from feature columns only, clip to
-    [0, capacity x 1 h]. Raises on the test fold unless `unlock_test` (reserved for the locked candidate in #5)."""
+def backtest(candidate, ex: pd.DataFrame, fs: list[Fold], cfg: dict = CONFIG, unlock_test: bool = False,
+             extra: tuple = ()) -> pd.DataFrame:
+    """Fit once per fold on `training_rows`, predict every row of the fold from feature columns (plus `extra`
+    issuance-time inputs such as `physics_mwh`) only, clip to [0, capacity x 1 h]. Raises on the test fold unless
+    `unlock_test` (reserved for the locked candidate in #5)."""
     out = []
     for fold in fs:
         if fold.test and not unlock_test:
@@ -100,7 +102,7 @@ def backtest(candidate, ex: pd.DataFrame, fs: list[Fold], cfg: dict = CONFIG, un
             raise AssertionError("training labels after the fold's first issuance")
         candidate.fit(train)
         rows = ex[(ex["target_date"] >= fold.start) & (ex["target_date"] <= fold.end)]
-        pred = np.asarray(candidate.predict(rows[list(F.CONTRACT)]), float)
+        pred = np.asarray(candidate.predict(rows[list(F.CONTRACT) + list(extra)]), float)
         bad = rows["scored"].to_numpy(bool) & ~np.isfinite(pred)
         if bad.any():  # a failed prediction must not drop a hard hour from the comparison
             raise ValueError(f"{candidate.name}: {int(bad.sum())} non-finite predictions on scored hours in {fold.name}")

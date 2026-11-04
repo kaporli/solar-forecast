@@ -1,0 +1,142 @@
+{
+ "experiment": "belgium",
+ "locked_at": "2026-11-04T11:48:39.646605+00:00",
+ "selected": "gbm",
+ "selection": {
+  "best_baseline": "physics",
+  "checks": {
+   "physics_calibrated": {
+    "improvement": 0.21919841111565763,
+    "interval_high": -79.40756628533786,
+    "folds_better": 4,
+    "passes": true
+   },
+   "gbm": {
+    "improvement": 0.3184589754466993,
+    "interval_high": -120.73315003393172,
+    "folds_better": 4,
+    "passes": true
+   },
+   "physics_residual_gbm": {
+    "improvement": 0.30407886560754815,
+    "interval_high": -127.29476889477948,
+    "folds_better": 4,
+    "passes": true
+   }
+  },
+  "selected": "gbm",
+  "within_2_percent": [
+   "gbm"
+  ],
+  "reason": "passes the rule",
+  "applies_to": "11h"
+ },
+ "model": {
+  "class": "GBM",
+  "name": "gbm",
+  "groups": [
+   "irradiance",
+   "temperature_cloud",
+   "geometry",
+   "calendar",
+   "lead",
+   "lags"
+  ],
+  "inputs": [
+   "shortwave_radiation",
+   "direct_normal_irradiance",
+   "diffuse_radiation",
+   "clearness",
+   "temperature_2m",
+   "wind_speed_10m",
+   "cloud_cover",
+   "cos_zenith",
+   "solar_azimuth_deg",
+   "ghi_clearsky",
+   "day_of_year",
+   "local_hour",
+   "lead_hours",
+   "persistence_lf"
+  ],
+  "physics": false,
+  "residual": false,
+  "params": {
+   "loss": "absolute_error",
+   "learning_rate": 0.05,
+   "max_iter": 400,
+   "max_leaf_nodes": 31,
+   "min_samples_leaf": 50,
+   "l2_regularization": 1.0,
+   "early_stopping": false,
+   "random_state": 0
+  },
+  "target": "load factor: actual / capacity known at issuance; prediction x capacity",
+  "seed": 0
+ },
+ "postprocessing": "every candidate's prediction is clipped to [0, capacity x 1 h]; the Elia benchmark is scored as published",
+ "refit_recipe": {
+  "train_rule": "a model for a fold is fitted once, before the fold's first issuance, on target days <= fold start - label_lag_days; expanding window; no refit inside a fold",
+  "last_target": "2025-10-30",
+  "first_target": "2024-03-15",
+  "rows": "target eligible, weather_complete, capacity_complete",
+  "applies_to": "the selected candidate and every fitted comparator"
+ },
+ "final_test": {
+  "start": "2025-11-01",
+  "end": "2026-10-31",
+  "kinds": "all; primary 11h",
+  "reported_with": [
+   "persistence",
+   "physics",
+   "physics_calibrated",
+   "elia"
+  ],
+  "comparator_recipes": {
+   "physics_calibrated": {
+    "class": "CalibratedPhysics",
+    "name": "physics_calibrated",
+    "groups": null,
+    "inputs": [
+     "physics_lf"
+    ],
+    "physics": null,
+    "residual": null,
+    "params": null
+   }
+  },
+  "slices": [
+   "before 2026-10-26 (ods032)",
+   "from 2026-10-26 (ods209)"
+  ],
+  "runs": "once; no tuning, switching or rerun with other settings against the test"
+ },
+ "intervals": null,
+ "references": {
+  "comparison": {
+   "file": "data/evaluation/belgium-models.json",
+   "sha256": "1d383a286062562703d486a12047334b5a3ef15c008456fe9318a5606c494298"
+  },
+  "code_commit": "307202a7ce4024922d266cac1d9afcbedcdcb54f",
+  "dataset_manifest": {
+   "file": "data/datasets/belgium-v1.json",
+   "sha256": "0d5f4c681c34e5a985a83a5989352cae365b1de96bf0b0fcb0196485c88dee0c"
+  },
+  "protocol": {
+   "file": "config/evaluation.json",
+   "sha256": "b12ed98577f75321d7fd1ce855da15614e8b141c0568bbaa36c5bae5b7e215d3"
+  },
+  "fingerprint": {
+   "src_sha256": "8116765454842dfd185f992a10ea64684b1e913c3f6211dff2ad493870309e6a",
+   "uv_lock_sha256": "8768ea74cf8ba9ce82b73305d03d3ee40531fac52e2cd204843d382aff97fae4",
+   "python": "3.13.7",
+   "versions": {
+    "numpy": "2.5.4",
+    "pandas": "3.1.0",
+    "scikit-learn": "1.9.1",
+    "pvlib": "0.16.1",
+    "pyarrow": "26.0.1",
+    "joblib": "1.6.0"
+   }
+  }
+ }
+}

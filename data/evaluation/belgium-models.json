@@ -1,0 +1,3444 @@
+{
+ "experiment": "belgium",
+ "built_at": "2026-11-04T11:47:44.786529+00:00",
+ "command": "uv run solar-data compare belgium",
+ "code_commit": "307202a7ce4024922d266cac1d9afcbedcdcb54f",
+ "code_dirty": false,
+ "dataset_manifest": {
+  "file": "data/datasets/belgium-v1.json",
+  "sha256": "0d5f4c681c34e5a985a83a5989352cae365b1de96bf0b0fcb0196485c88dee0c"
+ },
+ "protocol": {
+  "file": "config/evaluation.json",
+  "sha256": "b12ed98577f75321d7fd1ce855da15614e8b141c0568bbaa36c5bae5b7e215d3"
+ },
+ "hardware": "Apple M5, 24 GB, Darwin 27.2.0, Python 3.13.7",
+ "gbm_params": {
+  "loss": "absolute_error",
+  "learning_rate": 0.05,
+  "max_iter": 400,
+  "max_leaf_nodes": 31,
+  "min_samples_leaf": 50,
+  "l2_regularization": 1.0,
+  "early_stopping": false,
+  "random_state": 0
+ },
+ "fit_seconds_all_folds": 46.68814066701452,
+ "fingerprint": {
+  "src_sha256": "8116765454842dfd185f992a10ea64684b1e913c3f6211dff2ad493870309e6a",
+  "uv_lock_sha256": "8768ea74cf8ba9ce82b73305d03d3ee40531fac52e2cd204843d382aff97fae4",
+  "python": "3.13.7",
+  "versions": {
+   "numpy": "2.5.4",
+   "pandas": "3.1.0",
+   "scikit-learn": "1.9.1",
+   "pvlib": "0.16.1",
+   "pyarrow": "26.0.1",
+   "joblib": "1.6.0"
+  }
+ },
+ "recipes": {
+  "physics_calibrated": {
+   "class": "CalibratedPhysics",
+   "name": "physics_calibrated",
+   "groups": null,
+   "inputs": [
+    "physics_lf"
+   ],
+   "physics": null,
+   "residual": null,
+   "params": null
+  },
+  "gbm": {
+   "class": "GBM",
+   "name": "gbm",
+   "groups": [
+    "irradiance",
+    "temperature_cloud",
+    "geometry",
+    "calendar",
+    "lead",
+    "lags"
+   ],
+   "inputs": [
+    "shortwave_radiation",
+    "direct_normal_irradiance",
+    "diffuse_radiation",
+    "clearness",
+    "temperature_2m",
+    "wind_speed_10m",
+    "cloud_cover",
+    "cos_zenith",
+    "solar_azimuth_deg",
+    "ghi_clearsky",
+    "day_of_year",
+    "local_hour",
+    "lead_hours",
+    "persistence_lf"
+   ],
+   "physics": false,
+   "residual": false,
+   "params": {
+    "loss": "absolute_error",
+    "learning_rate": 0.05,
+    "max_iter": 400,
+    "max_leaf_nodes": 31,
+    "min_samples_leaf": 50,
+    "l2_regularization": 1.0,
+    "early_stopping": false,
+    "random_state": 0
+   }
+  },
+  "physics_residual_gbm": {
+   "class": "GBM",
+   "name": "physics_residual_gbm",
+   "groups": [
+    "irradiance",
+    "temperature_cloud",
+    "geometry",
+    "calendar",
+    "lead",
+    "lags"
+   ],
+   "inputs": [
+    "shortwave_radiation",
+    "direct_normal_irradiance",
+    "diffuse_radiation",
+    "clearness",
+    "temperature_2m",
+    "wind_speed_10m",
+    "cloud_cover",
+    "cos_zenith",
+    "solar_azimuth_deg",
+    "ghi_clearsky",
+    "day_of_year",
+    "local_hour",
+    "lead_hours",
+    "persistence_lf",
+    "physics_lf"
+   ],
+   "physics": true,
+   "residual": true,
+   "params": {
+    "loss": "absolute_error",
+    "learning_rate": 0.05,
+    "max_iter": 400,
+    "max_leaf_nodes": 31,
+    "min_samples_leaf": 50,
+    "l2_regularization": 1.0,
+    "early_stopping": false,
+    "random_state": 0
+   }
+  }
+ },
+ "splits": [
+  {
+   "fold": "V1",
+   "start": "2024-11-13",
+   "end": "2025-01-31",
+   "train_last_target": "2024-11-11",
+   "rows": 3840,
+   "scored_hours": 3840,
+   "rows_on_hindcast_runs": 0,
+   "scored_keys_sha256": "4fda310f9299bdc751e190c636ac248f7bf0c699166045f9ba690574d0c23482"
+  },
+  {
+   "fold": "V2",
+   "start": "2025-02-01",
+   "end": "2025-04-30",
+   "train_last_target": "2025-01-30",
+   "rows": 4270,
+   "scored_hours": 4270,
+   "rows_on_hindcast_runs": 0,
+   "scored_keys_sha256": "6451b48d9456fcc443724d4fee95cc36f928fe42c216d31b440cf7179e69f22a"
+  },
+  {
+   "fold": "V3",
+   "start": "2025-05-01",
+   "end": "2025-07-31",
+   "train_last_target": "2025-04-29",
+   "rows": 4416,
+   "scored_hours": 4416,
+   "rows_on_hindcast_runs": 0,
+   "scored_keys_sha256": "8ca9804c3118da9b46abe63ae2ebae7538d9c42d51ff4a7974fb7dff6b9463f3"
+  },
+  {
+   "fold": "V4",
+   "start": "2025-08-01",
+   "end": "2025-10-31",
+   "train_last_target": "2025-07-30",
+   "rows": 4418,
+   "scored_hours": 4226,
+   "rows_on_hindcast_runs": 0,
+   "scored_keys_sha256": "545d447b2ca49cd8f40e501eacb5e0ae5cd715a58c29012350ce2f711c8edb13"
+  }
+ ],
+ "candidates": [
+  "physics_calibrated",
+  "gbm",
+  "physics_residual_gbm"
+ ],
+ "ablation": [
+  "gbm_without_lags",
+  "gbm_without_temperature_cloud",
+  "gbm_without_irradiance",
+  "gbm_without_calendar",
+  "gbm_without_weather"
+ ],
+ "test_period": {
+  "start": "2025-11-01",
+  "end": "2026-10-31",
+  "scored": false
+ },
+ "results": {
+  "11h": {
+   "pooled": {
+    "persistence": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 782.7389844901533,
+     "mae_all": 432.41126148948655,
+     "rmse_daylight": 1251.653853105817,
+     "rmse_all": 930.2846026429266,
+     "bias_daylight": -0.961739184136942,
+     "daily_mae": 9210.116994214632,
+     "daily_bias": -12.34357651862931
+    },
+    "physics": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 624.1840091021407,
+     "mae_all": 344.80662964011526,
+     "rmse_daylight": 947.780383196096,
+     "rmse_all": 704.4320887487702,
+     "bias_daylight": 525.3623570226105,
+     "daily_mae": 7335.327294015243,
+     "daily_bias": 6965.188269895755
+    },
+    "physics_calibrated": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 487.3638660631503,
+     "mae_all": 269.22558835054866,
+     "rmse_daylight": 735.8971093546999,
+     "rmse_all": 546.9511155129348,
+     "bias_daylight": 79.0972573829059,
+     "daily_mae": 5308.460725364427,
+     "daily_bias": 1048.6592841280954
+    },
+    "gbm": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 425.40700907325976,
+     "mae_all": 235.00924965264255,
+     "rmse_daylight": 664.9518176088181,
+     "rmse_all": 494.2215072609583,
+     "bias_daylight": 102.49886139836482,
+     "daily_mae": 4552.913360037986,
+     "daily_bias": 1359.1404306629545
+    },
+    "physics_residual_gbm": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 434.38284368399025,
+     "mae_all": 239.95825423541342,
+     "rmse_daylight": 682.6719508390884,
+     "rmse_all": 507.3918354826397,
+     "bias_daylight": 184.81251335774107,
+     "daily_mae": 4607.970979196203,
+     "daily_bias": 2450.2194256626585
+    },
+    "gbm_without_lags": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 423.3893326336185,
+     "mae_all": 233.8867564798076,
+     "rmse_daylight": 664.7628533361512,
+     "rmse_all": 494.0810062138435,
+     "bias_daylight": 106.45803056656246,
+     "daily_mae": 4519.569349550942,
+     "daily_bias": 1411.440977625009
+    },
+    "gbm_without_temperature_cloud": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 426.5245779486249,
+     "mae_all": 235.6190073998117,
+     "rmse_daylight": 667.2028984202376,
+     "rmse_all": 495.8945566487908,
+     "bias_daylight": 114.5205542574478,
+     "daily_mae": 4577.624957191408,
+     "daily_bias": 1518.3402431642478
+    },
+    "gbm_without_irradiance": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 500.36104279715283,
+     "mae_all": 276.45155277253167,
+     "rmse_daylight": 795.2928884783954,
+     "rmse_all": 591.0976202683077,
+     "bias_daylight": 33.969787197174604,
+     "daily_mae": 5553.319095503555,
+     "daily_bias": 451.47347955358714
+    },
+    "gbm_without_calendar": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 417.68187308275077,
+     "mae_all": 230.7400167352807,
+     "rmse_daylight": 659.9408534413649,
+     "rmse_all": 490.4971200799754,
+     "bias_daylight": 93.15647066793719,
+     "daily_mae": 4429.594067298779,
+     "daily_bias": 1235.2377383983828
+    },
+    "gbm_without_weather": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 807.8527846053967,
+     "mae_all": 446.2887749009869,
+     "rmse_daylight": 1255.5697570979064,
+     "rmse_all": 933.1950729662822,
+     "bias_daylight": -192.79702432636202,
+     "daily_mae": 9841.922877254237,
+     "daily_bias": -2555.5680167736555
+    }
+   },
+   "folds": {
+    "persistence": {
+     "V1": {
+      "hours": 1920,
+      "daylight_hours": 744,
+      "complete_days": 80,
+      "mae_daylight": 480.31345136780374,
+      "mae_all": 186.12171188419057,
+      "rmse_daylight": 800.4376398823914,
+      "rmse_all": 498.26841258940885,
+      "bias_daylight": 3.846150237505015,
+      "daily_mae": 4205.1684256139615,
+      "daily_bias": 35.76920345879671
+     },
+     "V2": {
+      "hours": 2135,
+      "daylight_hours": 1152,
+      "complete_days": 89,
+      "mae_daylight": 931.2754327864732,
+      "mae_all": 502.54171127401264,
+      "rmse_daylight": 1476.3141476995745,
+      "rmse_all": 1084.442416564621,
+      "bias_daylight": -84.5522785677605,
+      "daily_mae": 11272.136852922022,
+      "daily_bias": -1093.3442405624733
+     },
+     "V3": {
+      "hours": 2208,
+      "daylight_hours": 1548,
+      "complete_days": 92,
+      "mae_daylight": 777.9767306155799,
+      "mae_all": 545.4294189279517,
+      "rmse_daylight": 1230.4619107858696,
+      "rmse_all": 1030.2772692777191,
+      "bias_daylight": 32.05939526169869,
+      "daily_mae": 11495.568232229452,
+      "daily_bias": 539.4341724468433
+     },
+     "V4": {
+      "hours": 2113,
+      "daylight_hours": 1183,
+      "complete_days": 88,
+      "mae_daylight": 834.5247640366515,
+      "mae_all": 467.24483145071406,
+      "rmse_daylight": 1273.1818223641706,
+      "rmse_all": 952.649576923929,
+      "bias_daylight": 34.20522236960707,
+      "daily_mae": 9285.282950643408,
+      "daily_bias": 460.34373935505863
+     }
+    },
+    "physics": {
+     "V1": {
+      "hours": 1920,
+      "daylight_hours": 744,
+      "complete_days": 80,
+      "mae_daylight": 813.5345992694278,
+      "mae_all": 315.24478937836165,
+      "rmse_daylight": 1235.9735818432948,
+      "rmse_all": 769.3873499989091,
+      "bias_daylight": 802.6060584425685,
+      "daily_mae": 7481.468174576219,
+      "daily_bias": 7464.233171640888
+     },
+     "V2": {
+      "hours": 2135,
+      "daylight_hours": 1152,
+      "complete_days": 89,
+      "mae_daylight": 690.932047976719,
+      "mae_all": 372.81222612139595,
+      "rmse_daylight": 994.476006586328,
+      "rmse_all": 730.502336521076,
+      "bias_daylight": 619.2435682508427,
+      "daily_mae": 8224.037936940216,
+      "daily_bias": 8015.373113763719
+     },
+     "V3": {
+      "hours": 2208,
+      "daylight_hours": 1548,
+      "complete_days": 92,
+      "mae_daylight": 468.9130002524974,
+      "mae_all": 328.74884449314584,
+      "rmse_daylight": 735.7766127740316,
+      "rmse_all": 616.0726413086322,
+      "bias_daylight": 329.16967321577454,
+      "daily_mae": 6102.520470036356,
+      "daily_bias": 5538.6361944349865
+     },
+     "V4": {
+      "hours": 2113,
+      "daylight_hours": 1183,
+      "complete_days": 88,
+      "mae_daylight": 643.2786344878317,
+      "mae_all": 360.1508674155726,
+      "rmse_daylight": 938.729653219092,
+      "rmse_all": 702.3978291470409,
+      "bias_daylight": 516.3055568041908,
+      "daily_mae": 7592.505818343159,
+      "daily_bias": 6940.787675560883
+     }
+    },
+    "physics_calibrated": {
+     "V1": {
+      "hours": 1920,
+      "daylight_hours": 744,
+      "complete_days": 80,
+      "mae_daylight": 643.1242777631584,
+      "mae_all": 249.2107897946822,
+      "rmse_daylight": 998.5908536340538,
+      "rmse_all": 621.6177933769461,
+      "bias_daylight": 621.6663987089623,
+      "daily_mae": 5814.8951110325,
+      "daily_bias": 5781.494336118351
+     },
+     "V2": {
+      "hours": 2135,
+      "daylight_hours": 1152,
+      "complete_days": 89,
+      "mae_daylight": 453.68292568809755,
+      "mae_all": 244.79771142514676,
+      "rmse_daylight": 702.1408578731919,
+      "rmse_all": 515.764617602378,
+      "bias_daylight": 88.08904049716905,
+      "daily_mae": 4627.529728146809,
+      "daily_bias": 1140.2043949745928
+     },
+     "V3": {
+      "hours": 2208,
+      "daylight_hours": 1548,
+      "complete_days": 92,
+      "mae_daylight": 452.18817286270996,
+      "mae_all": 317.02328616008833,
+      "rmse_daylight": 621.200643680236,
+      "rmse_all": 520.1371104905902,
+      "bias_daylight": -194.1013322040102,
+      "daily_mae": 5896.554125259908,
+      "daily_bias": -3265.9672445848696
+     },
+     "V4": {
+      "hours": 2113,
+      "daylight_hours": 1183,
+      "complete_days": 88,
+      "mae_daylight": 468.23171904838784,
+      "mae_all": 262.1477907639578,
+      "rmse_daylight": 711.2938958491739,
+      "rmse_all": 532.2206309537017,
+      "bias_daylight": 86.60481561310777,
+      "daily_mae": 4921.909760688722,
+      "daily_bias": 1164.2424843216634
+     }
+    },
+    "gbm": {
+     "V1": {
+      "hours": 1920,
+      "daylight_hours": 744,
+      "complete_days": 80,
+      "mae_daylight": 335.428716605169,
+      "mae_all": 129.98512428204486,
+      "rmse_daylight": 585.7346186612409,
+      "rmse_all": 364.6169103356852,
+      "bias_daylight": -115.02352887448299,
+      "daily_mae": 2917.98443348546,
+      "daily_bias": -1069.5688814223274
+     },
+     "V2": {
+      "hours": 2135,
+      "daylight_hours": 1152,
+      "complete_days": 89,
+      "mae_daylight": 465.6414690706108,
+      "mae_all": 251.27265917382223,
+      "rmse_daylight": 733.4405393700564,
+      "rmse_all": 538.7562442288477,
+      "bias_daylight": 19.899999458812545,
+      "daily_mae": 4961.316547382625,
+      "daily_bias": 258.11752071295246
+     },
+     "V3": {
+      "hours": 2208,
+      "daylight_hours": 1548,
+      "complete_days": 92,
+      "mae_daylight": 437.6295843108222,
+      "mae_all": 306.8236939918765,
+      "rmse_daylight": 658.0514903179087,
+      "rmse_all": 550.9927008597223,
+      "bias_daylight": 296.4618684438861,
+      "daily_mae": 5645.773906988205,
+      "daily_bias": 4988.466230133138
+     },
+     "V4": {
+      "hours": 2113,
+      "daylight_hours": 1183,
+      "complete_days": 88,
+      "mae_daylight": 426.8213837237794,
+      "mae_all": 238.96459668662288,
+      "rmse_daylight": 650.501454395796,
+      "rmse_all": 486.7331171178251,
+      "bias_daylight": 65.92727425626515,
+      "daily_mae": 4483.632225164227,
+      "daily_bias": 886.2973670392694
+     }
+    },
+    "physics_residual_gbm": {
+     "V1": {
+      "hours": 1920,
+      "daylight_hours": 744,
+      "complete_days": 80,
+      "mae_daylight": 454.9080113991656,
+      "mae_all": 176.276986578635,
+      "rmse_daylight": 770.7811218045496,
+      "rmse_all": 479.8073789456469,
+      "bias_daylight": 181.9790784013339,
+      "daily_mae": 3919.1963382456115,
+      "daily_bias": 1692.402257257405
+     },
+     "V2": {
+      "hours": 2135,
+      "daylight_hours": 1152,
+      "complete_days": 89,
+      "mae_daylight": 431.4762773777775,
+      "mae_all": 232.8154824539577,
+      "rmse_daylight": 681.3992093025921,
+      "rmse_all": 500.52863137142714,
+      "bias_daylight": 154.93982351528737,
+      "daily_mae": 4344.345069758971,
+      "daily_bias": 2005.5089122428205
+     },
+     "V3": {
+      "hours": 2208,
+      "daylight_hours": 1548,
+      "complete_days": 92,
+      "mae_daylight": 413.4288113514787,
+      "mae_all": 289.8496033614534,
+      "rmse_daylight": 639.5353306192637,
+      "rmse_all": 535.4889153916515,
+      "bias_daylight": 271.78218838631716,
+      "daily_mae": 5237.4152485209925,
+      "daily_bias": 4573.029384478466
+     },
+     "V4": {
+      "hours": 2113,
+      "daylight_hours": 1183,
+      "complete_days": 88,
+      "mae_daylight": 451.7239101720667,
+      "mae_all": 252.9056052927378,
+      "rmse_daylight": 679.5770872626902,
+      "rmse_all": 508.4887530674358,
+      "bias_daylight": 101.8812854303006,
+      "daily_mae": 4842.696029628934,
+      "daily_bias": 1369.606845614154
+     }
+    },
+    "gbm_without_lags": {
+     "V1": {
+      "hours": 1920,
+      "daylight_hours": 744,
+      "complete_days": 80,
+      "mae_daylight": 329.384280788215,
+      "mae_all": 127.63657840650328,
+      "rmse_daylight": 579.4914916822295,
+      "rmse_all": 360.73054449428696,
+      "bias_daylight": -104.51892785645536,
+      "daily_mae": 2850.410187096643,
+      "daily_bias": -972.0282087978879
+     },
+     "V2": {
+      "hours": 2135,
+      "daylight_hours": 1152,
+      "complete_days": 89,
+      "mae_daylight": 458.64965962531073,
+      "mae_all": 247.47842568393918,
+      "rmse_daylight": 730.8876277706604,
+      "rmse_all": 536.8808461166128,
+      "bias_daylight": 26.709396619882884,
+      "daily_mae": 4818.940939722145,
+      "daily_bias": 345.7372908056317
+     },
+     "V3": {
+      "hours": 2208,
+      "daylight_hours": 1548,
+      "complete_days": 92,
+      "mae_daylight": 437.42217517816874,
+      "mae_all": 306.67571618343936,
+      "rmse_daylight": 658.2706621106875,
+      "rmse_all": 551.1761840404807,
+      "bias_daylight": 293.6233521930903,
+      "daily_mae": 5669.921688169221,
+      "daily_bias": 4940.6456886101405
+     },
+     "V4": {
+      "hours": 2113,
+      "daylight_hours": 1183,
+      "complete_days": 88,
+      "mae_daylight": 429.8111598691106,
+      "mae_all": 240.6373978069749,
+      "rmse_daylight": 655.7494151166484,
+      "rmse_all": 490.6598657718636,
+      "bias_daylight": 71.88944687715842,
+      "daily_mae": 4531.572148621684,
+      "daily_bias": 966.4219961491486
+     }
+    },
+    "gbm_without_temperature_cloud": {
+     "V1": {
+      "hours": 1920,
+      "daylight_hours": 744,
+      "complete_days": 80,
+      "mae_daylight": 349.9301444041953,
+      "mae_all": 135.60019777482532,
+      "rmse_daylight": 597.6320250940752,
+      "rmse_all": 372.02293978155,
+      "bias_daylight": -114.29139464757631,
+      "daily_mae": 3060.270100089893,
+      "daily_bias": -1062.8615603163094
+     },
+     "V2": {
+      "hours": 2135,
+      "daylight_hours": 1152,
+      "complete_days": 89,
+      "mae_daylight": 437.0248274888953,
+      "mae_all": 235.8102720604335,
+      "rmse_daylight": 685.8835179614105,
+      "rmse_all": 503.8226256865867,
+      "bias_daylight": 23.436466905480515,
+      "daily_mae": 4517.00401397756,
+      "daily_bias": 303.3755556973655
+     },
+     "V3": {
+      "hours": 2208,
+      "daylight_hours": 1548,
+      "complete_days": 92,
+      "mae_daylight": 449.7913125174447,
+      "mae_all": 315.3445289399874,
+      "rmse_daylight": 681.2069194181171,
+      "rmse_all": 570.380926792952,
+      "bias_daylight": 306.1921856995655,
+      "daily_mae": 5934.205623440544,
+      "daily_bias": 5152.056577017585
+     },
+     "V4": {
+      "hours": 2113,
+      "daylight_hours": 1183,
+      "complete_days": 88,
+      "mae_daylight": 434.0250563713897,
+      "mae_all": 242.99894723362053,
+      "rmse_daylight": 671.6975269794182,
+      "rmse_all": 502.5929306793069,
+      "bias_daylight": 96.31030332118924,
+      "daily_mae": 4600.104857409967,
+      "daily_bias": 1294.7731834879996
+     }
+    },
+    "gbm_without_irradiance": {
+     "V1": {
+      "hours": 1920,
+      "daylight_hours": 744,
+      "complete_days": 80,
+      "mae_daylight": 348.89737799071565,
+      "mae_all": 135.21696035512286,
+      "rmse_daylight": 603.6607000953163,
+      "rmse_all": 375.7765586341074,
+      "bias_daylight": -151.46427469703417,
+      "daily_mae": 3029.5921433397825,
+      "daily_bias": -1408.1626527037654
+     },
+     "V2": {
+      "hours": 2135,
+      "daylight_hours": 1152,
+      "complete_days": 89,
+      "mae_daylight": 612.9735487121202,
+      "mae_all": 330.82653994290473,
+      "rmse_daylight": 943.0974982763581,
+      "rmse_all": 692.7633843603373,
+      "bias_daylight": -82.04735531592883,
+      "daily_mae": 6950.365809007306,
+      "daily_bias": -1060.1134681132212
+     },
+     "V3": {
+      "hours": 2208,
+      "daylight_hours": 1548,
+      "complete_days": 92,
+      "mae_daylight": 477.37557455395876,
+      "mae_all": 334.70914109333984,
+      "rmse_daylight": 747.0888620700455,
+      "rmse_all": 625.5447280520477,
+      "bias_daylight": 264.9827382834119,
+      "daily_mae": 6243.51093326663,
+      "daily_bias": 4459.277456385767
+     },
+     "V4": {
+      "hours": 2113,
+      "daylight_hours": 1183,
+      "complete_days": 88,
+      "mae_daylight": 516.0337939741703,
+      "mae_all": 288.9679109459031,
+      "rmse_daylight": 805.0907560525542,
+      "rmse_all": 602.4045322819146,
+      "bias_daylight": -38.7211325467891,
+      "daily_mae": 5713.1298863792945,
+      "daily_bias": -519.1610311921683
+     }
+    },
+    "gbm_without_calendar": {
+     "V1": {
+      "hours": 1920,
+      "daylight_hours": 744,
+      "complete_days": 80,
+      "mae_daylight": 278.12377759568426,
+      "mae_all": 107.774032403817,
+      "rmse_daylight": 500.2997777803448,
+      "rmse_all": 311.43410137796536,
+      "bias_daylight": -169.82539998881163,
+      "daily_mae": 2364.882839145296,
+      "daily_bias": -1579.3565675748446
+     },
+     "V2": {
+      "hours": 2135,
+      "daylight_hours": 1152,
+      "complete_days": 89,
+      "mae_daylight": 494.0158824780088,
+      "mae_all": 266.56996837980637,
+      "rmse_daylight": 779.5556408995989,
+      "rmse_all": 572.6304447364283,
+      "bias_daylight": 82.76478232006288,
+      "daily_mae": 5345.029321060324,
+      "daily_bias": 1071.518175382774
+     },
+     "V3": {
+      "hours": 2208,
+      "daylight_hours": 1548,
+      "complete_days": 92,
+      "mae_daylight": 446.1389249411919,
+      "mae_all": 312.7945788253459,
+      "rmse_daylight": 668.2720279926538,
+      "rmse_all": 559.550494258598,
+      "bias_daylight": 308.47157409203766,
+      "daily_mae": 5827.337123844766,
+      "daily_bias": 5190.665895969204
+     },
+     "V4": {
+      "hours": 2113,
+      "daylight_hours": 1183,
+      "complete_days": 88,
+      "mae_daylight": 393.8804596779944,
+      "mae_all": 220.5276504600718,
+      "rmse_daylight": 608.1587809510683,
+      "rmse_all": 455.0505444062254,
+      "bias_daylight": -13.080252371061324,
+      "daily_mae": 3919.4895157677606,
+      "daily_bias": -175.68049921829913
+     }
+    },
+    "gbm_without_weather": {
+     "V1": {
+      "hours": 1920,
+      "daylight_hours": 744,
+      "complete_days": 80,
+      "mae_daylight": 432.9823458285709,
+      "mae_all": 167.78080440979514,
+      "rmse_daylight": 757.6164798721045,
+      "rmse_all": 471.61245543110635,
+      "bias_daylight": -284.5010294236585,
+      "daily_mae": 3845.44113135856,
+      "daily_bias": -2645.86242774129
+     },
+     "V2": {
+      "hours": 2135,
+      "daylight_hours": 1152,
+      "complete_days": 89,
+      "mae_daylight": 1158.9928689373057,
+      "mae_all": 625.3900783955189,
+      "rmse_daylight": 1664.748304190181,
+      "rmse_all": 1222.857645600835,
+      "bias_daylight": -767.4205926647288,
+      "daily_mae": 14319.527220481092,
+      "daily_bias": -9932.82051001098
+     },
+     "V3": {
+      "hours": 2208,
+      "daylight_hours": 1548,
+      "complete_days": 92,
+      "mae_daylight": 697.3419850532226,
+      "mae_all": 488.91687055954117,
+      "rmse_daylight": 1016.0715355728483,
+      "rmse_all": 850.7663203190555,
+      "bias_daylight": 11.41396643870868,
+      "daily_mae": 10306.220314275783,
+      "daily_bias": 192.51890087393053
+     },
+     "V4": {
+      "hours": 2113,
+      "daylight_hours": 1183,
+      "complete_days": 88,
+      "mae_daylight": 846.2813112379959,
+      "mae_all": 473.8473102385044,
+      "rmse_daylight": 1324.8458058421757,
+      "rmse_all": 991.3077349035086,
+      "bias_daylight": 157.22454525424462,
+      "daily_mae": 10279.381842236984,
+      "daily_bias": 2114.6027599531017
+     }
+    }
+   },
+   "candidates": [
+    "physics_calibrated",
+    "gbm",
+    "physics_residual_gbm"
+   ],
+   "vs_best_baseline": {
+    "physics_calibrated": {
+     "calendar_days": 353,
+     "days": 349,
+     "hours": 4627,
+     "difference": -136.82014303899047,
+     "low": -191.95883614982915,
+     "high": -79.40756628533786,
+     "daily_difference_autocorrelation": [
+      0.306449980872159,
+      0.2573031616189053,
+      0.231740820562113,
+      0.19456366044398302,
+      0.1630187373216202,
+      0.08613175531175596,
+      0.1950989158687151,
+      0.16610153592520735,
+      0.20395620341405543,
+      0.1498434096138661,
+      0.17404220623706246,
+      0.2421945231501213,
+      0.22414456308143596,
+      0.1632172548628502
+     ]
+    },
+    "gbm": {
+     "calendar_days": 353,
+     "days": 349,
+     "hours": 4627,
+     "difference": -198.77700002888096,
+     "low": -282.88523375556696,
+     "high": -120.73315003393172,
+     "daily_difference_autocorrelation": [
+      0.34293378651539586,
+      0.20928098950880764,
+      0.24117111688740467,
+      0.22264854665898676,
+      0.22514699310167846,
+      0.21582484236399516,
+      0.29737333231427426,
+      0.23171739995610044,
+      0.2133997814052227,
+      0.22868832652841561,
+      0.14697212674608875,
+      0.15668974832190652,
+      0.12329071495413432,
+      0.020607225856550865
+     ]
+    },
+    "physics_residual_gbm": {
+     "calendar_days": 353,
+     "days": 349,
+     "hours": 4627,
+     "difference": -189.80116541815053,
+     "low": -257.9949865620845,
+     "high": -127.29476889477948,
+     "daily_difference_autocorrelation": [
+      0.3281488307501468,
+      0.1923742828848153,
+      0.19298108796721147,
+      0.17246620642951319,
+      0.20554199337750487,
+      0.26507978460856835,
+      0.2732197564106557,
+      0.15684923544300672,
+      0.19578415811370656,
+      0.1606886276528551,
+      0.11337970870620485,
+      0.20324252880030702,
+      0.22100845067797031,
+      0.11053503423448091
+     ]
+    },
+    "gbm_without_lags": {
+     "calendar_days": 353,
+     "days": 349,
+     "hours": 4627,
+     "difference": -200.79467646852214,
+     "low": -285.6920855768541,
+     "high": -122.61985870213566,
+     "daily_difference_autocorrelation": [
+      0.35291374190249464,
+      0.21533562997807182,
+      0.24556973223374692,
+      0.22915964787382945,
+      0.22582102489270897,
+      0.22890432542414058,
+      0.3062693743209034,
+      0.21116042282746345,
+      0.20864489315185586,
+      0.2315027660258977,
+      0.1551128792650471,
+      0.15675347694234718,
+      0.10825901320920543,
+      0.019966120410224428
+     ]
+    },
+    "gbm_without_temperature_cloud": {
+     "calendar_days": 353,
+     "days": 349,
+     "hours": 4627,
+     "difference": -197.65943115351584,
+     "low": -281.87131661831575,
+     "high": -119.7201853713866,
+     "daily_difference_autocorrelation": [
+      0.3524789029631819,
+      0.22725802000811343,
+      0.2724116717006275,
+      0.2417695227155789,
+      0.21691910939649126,
+      0.23951975393743835,
+      0.31202292703576867,
+      0.23722692947041682,
+      0.2252331374330497,
+      0.2438532296002154,
+      0.14504512453911675,
+      0.17159178817843532,
+      0.13592381360250097,
+      0.05839962817416383
+     ]
+    },
+    "gbm_without_irradiance": {
+     "calendar_days": 353,
+     "days": 349,
+     "hours": 4627,
+     "difference": -123.8229663049879,
+     "low": -211.10780777139883,
+     "high": -45.71494328658206,
+     "daily_difference_autocorrelation": [
+      0.309958554625036,
+      0.164149833304295,
+      0.1747529459021909,
+      0.18182308383982415,
+      0.21896105873704966,
+      0.16185554203424393,
+      0.23389450594480254,
+      0.19717021631304998,
+      0.21269872109447935,
+      0.2020041181006239,
+      0.11787990191257569,
+      0.14066944143749663,
+      0.09962857114021731,
+      0.000521792008579001
+     ]
+    },
+    "gbm_without_calendar": {
+     "calendar_days": 353,
+     "days": 349,
+     "hours": 4627,
+     "difference": -206.50213601938998,
+     "low": -297.19096206630564,
+     "high": -127.07571326401236,
+     "daily_difference_autocorrelation": [
+      0.34017910392876394,
+      0.24766730533874892,
+      0.255039709720306,
+      0.21208484707371197,
+      0.2546628891288479,
+      0.24551911674516272,
+      0.29419678765887897,
+      0.21944021064655428,
+      0.25106449410723025,
+      0.2391611535519961,
+      0.12674810888440685,
+      0.17933042194670054,
+      0.1652586259263881,
+      0.04313266661057839
+     ]
+    },
+    "gbm_without_weather": {
+     "calendar_days": 353,
+     "days": 349,
+     "hours": 4627,
+     "difference": 183.66877550325594,
+     "low": 39.72196211939952,
+     "high": 315.94879789112366,
+     "daily_difference_autocorrelation": [
+      0.4567964607334877,
+      0.3267600829966927,
+      0.24394389850684525,
+      0.19728244768428146,
+      0.20385005392613684,
+      0.13442982951321297,
+      0.23214441388298263,
+      0.1399928533139819,
+      0.1462410991066473,
+      0.12120651778636458,
+      0.12081093445048828,
+      0.1531699459922725,
+      0.12206435930070765,
+      0.12101214616077073
+     ]
+    }
+   },
+   "elia_subset": {
+    "persistence": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 782.7389844901533,
+     "mae_all": 432.41126148948655,
+     "rmse_daylight": 1251.653853105817,
+     "rmse_all": 930.2846026429266,
+     "bias_daylight": -0.961739184136942,
+     "daily_mae": 9210.116994214632,
+     "daily_bias": -12.34357651862931
+    },
+    "physics": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 624.1840091021407,
+     "mae_all": 344.80662964011526,
+     "rmse_daylight": 947.780383196096,
+     "rmse_all": 704.4320887487702,
+     "bias_daylight": 525.3623570226105,
+     "daily_mae": 7335.327294015243,
+     "daily_bias": 6965.188269895755
+    },
+    "physics_calibrated": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 487.3638660631503,
+     "mae_all": 269.22558835054866,
+     "rmse_daylight": 735.8971093546999,
+     "rmse_all": 546.9511155129348,
+     "bias_daylight": 79.0972573829059,
+     "daily_mae": 5308.460725364427,
+     "daily_bias": 1048.6592841280954
+    },
+    "gbm": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 425.40700907325976,
+     "mae_all": 235.00924965264255,
+     "rmse_daylight": 664.9518176088181,
+     "rmse_all": 494.2215072609583,
+     "bias_daylight": 102.49886139836482,
+     "daily_mae": 4552.913360037986,
+     "daily_bias": 1359.1404306629545
+    },
+    "physics_residual_gbm": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 434.38284368399025,
+     "mae_all": 239.95825423541342,
+     "rmse_daylight": 682.6719508390884,
+     "rmse_all": 507.3918354826397,
+     "bias_daylight": 184.81251335774107,
+     "daily_mae": 4607.970979196203,
+     "daily_bias": 2450.2194256626585
+    },
+    "elia": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 321.4490855846121,
+     "mae_all": 177.57233407951287,
+     "rmse_daylight": 499.1818246240462,
+     "rmse_all": 371.0138990298932,
+     "bias_daylight": 60.92513215906636,
+     "daily_mae": 3182.9187184813763,
+     "daily_bias": 807.7366611747848
+    }
+   },
+   "resources": {
+    "physics_calibrated": {
+     "artifact_mb": 0.000125885009765625,
+     "load_s": 0.5662147919938434,
+     "predict_s": 1.3249984476715326e-05,
+     "peak_rss_mb": 190.21875,
+     "inputs": 1,
+     "fit_s_refit_recipe": 0.00016737499390728772,
+     "refit_rows": 24397,
+     "refit_last_target": "2025-10-30"
+    },
+    "gbm": {
+     "artifact_mb": 1.4000873565673828,
+     "load_s": 0.501459541002987,
+     "predict_s": 0.010747958003776148,
+     "peak_rss_mb": 194.359375,
+     "inputs": 14,
+     "fit_s_refit_recipe": 1.8545544579974376,
+     "refit_rows": 24397,
+     "refit_last_target": "2025-10-30"
+    },
+    "physics_residual_gbm": {
+     "artifact_mb": 1.4023666381835938,
+     "load_s": 0.47756429100991227,
+     "predict_s": 0.01230120801483281,
+     "peak_rss_mb": 194.171875,
+     "inputs": 15,
+     "fit_s_refit_recipe": 1.8134373339999001,
+     "refit_rows": 24397,
+     "refit_last_target": "2025-10-30"
+    }
+   }
+  },
+  "18h": {
+   "pooled": {
+    "persistence": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 782.7389844901533,
+     "mae_all": 432.41126148948655,
+     "rmse_daylight": 1251.653853105817,
+     "rmse_all": 930.2846026429266,
+     "bias_daylight": -0.961739184136942,
+     "daily_mae": 9210.116994214632,
+     "daily_bias": -12.34357651862931
+    },
+    "physics": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 614.3574107381129,
+     "mae_all": 339.3783022009609,
+     "rmse_daylight": 933.5658757866016,
+     "rmse_all": 693.8672413196288,
+     "bias_daylight": 511.83506075306815,
+     "daily_mae": 7146.358349560194,
+     "daily_bias": 6785.845003880934
+    },
+    "physics_calibrated": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 487.723773381962,
+     "mae_all": 269.4244053472229,
+     "rmse_daylight": 733.1406303506021,
+     "rmse_all": 544.9023790157222,
+     "bias_daylight": 68.13598987011864,
+     "daily_mae": 5288.430274815956,
+     "daily_bias": 903.3361185645813
+    },
+    "gbm": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 415.08749747133896,
+     "mae_all": 229.30946933013544,
+     "rmse_daylight": 644.1267446819592,
+     "rmse_all": 478.74340700278583,
+     "bias_daylight": 79.49955779905976,
+     "daily_mae": 4370.847041045321,
+     "daily_bias": 1054.2391210548851
+    },
+    "physics_residual_gbm": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 422.36994288202743,
+     "mae_all": 233.32218785400437,
+     "rmse_daylight": 662.9247691642748,
+     "rmse_all": 492.7148610692638,
+     "bias_daylight": 163.56352380004046,
+     "daily_mae": 4375.66649575149,
+     "daily_bias": 2168.5028792916532
+    },
+    "gbm_without_lags": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 413.15717598865547,
+     "mae_all": 228.234147412135,
+     "rmse_daylight": 644.1750762556039,
+     "rmse_all": 478.77926428500234,
+     "bias_daylight": 82.16352998195505,
+     "daily_mae": 4344.409696148975,
+     "daily_bias": 1089.3413003692447
+    },
+    "gbm_without_temperature_cloud": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 417.71870138859686,
+     "mae_all": 230.7541225489053,
+     "rmse_daylight": 648.1538408772062,
+     "rmse_all": 481.73645812227835,
+     "bias_daylight": 86.95110795526571,
+     "daily_mae": 4384.248356164777,
+     "daily_bias": 1152.8178571810415
+    },
+    "gbm_without_irradiance": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 492.2826167115157,
+     "mae_all": 271.98496931194967,
+     "rmse_daylight": 785.6154275312941,
+     "rmse_all": 583.9046622742476,
+     "bias_daylight": 23.7299618450668,
+     "daily_mae": 5446.193002799367,
+     "daily_bias": 315.62037075188357
+    },
+    "gbm_without_calendar": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 407.3883263782555,
+     "mae_all": 225.0530247992368,
+     "rmse_daylight": 640.3030327619033,
+     "rmse_all": 475.9014190426778,
+     "bias_daylight": 64.28639339337944,
+     "daily_mae": 4254.177769693881,
+     "daily_bias": 852.4642916904345
+    },
+    "gbm_without_weather": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 808.8484309066838,
+     "mae_all": 446.83870237635006,
+     "rmse_daylight": 1258.71300762224,
+     "rmse_all": 935.5312736673853,
+     "bias_daylight": -187.22034697481996,
+     "daily_mae": 9870.09457643906,
+     "daily_bias": -2481.634998999524
+    }
+   },
+   "folds": {
+    "persistence": {
+     "V1": {
+      "hours": 1920,
+      "daylight_hours": 744,
+      "complete_days": 80,
+      "mae_daylight": 480.31345136780374,
+      "mae_all": 186.12171188419057,
+      "rmse_daylight": 800.4376398823914,
+      "rmse_all": 498.26841258940885,
+      "bias_daylight": 3.846150237505015,
+      "daily_mae": 4205.1684256139615,
+      "daily_bias": 35.76920345879671
+     },
+     "V2": {
+      "hours": 2135,
+      "daylight_hours": 1152,
+      "complete_days": 89,
+      "mae_daylight": 931.2754327864732,
+      "mae_all": 502.54171127401264,
+      "rmse_daylight": 1476.3141476995745,
+      "rmse_all": 1084.442416564621,
+      "bias_daylight": -84.5522785677605,
+      "daily_mae": 11272.136852922022,
+      "daily_bias": -1093.3442405624733
+     },
+     "V3": {
+      "hours": 2208,
+      "daylight_hours": 1548,
+      "complete_days": 92,
+      "mae_daylight": 777.9767306155799,
+      "mae_all": 545.4294189279517,
+      "rmse_daylight": 1230.4619107858696,
+      "rmse_all": 1030.2772692777191,
+      "bias_daylight": 32.05939526169869,
+      "daily_mae": 11495.568232229452,
+      "daily_bias": 539.4341724468433
+     },
+     "V4": {
+      "hours": 2113,
+      "daylight_hours": 1183,
+      "complete_days": 88,
+      "mae_daylight": 834.5247640366515,
+      "mae_all": 467.24483145071406,
+      "rmse_daylight": 1273.1818223641706,
+      "rmse_all": 952.649576923929,
+      "bias_daylight": 34.20522236960707,
+      "daily_mae": 9285.282950643408,
+      "daily_bias": 460.34373935505863
+     }
+    },
+    "physics": {
+     "V1": {
+      "hours": 1920,
+      "daylight_hours": 744,
+      "complete_days": 80,
+      "mae_daylight": 838.6935655650848,
+      "mae_all": 324.9938888179286,
+      "rmse_daylight": 1273.4886109939305,
+      "rmse_all": 792.740267315574,
+      "bias_daylight": 829.7528667086332,
+      "daily_mae": 7716.698488515288,
+      "daily_bias": 7716.698488515288
+     },
+     "V2": {
+      "hours": 2135,
+      "daylight_hours": 1152,
+      "complete_days": 89,
+      "mae_daylight": 667.6066729897715,
+      "mae_all": 360.2263563392116,
+      "rmse_daylight": 966.3749151124453,
+      "rmse_all": 709.8603976066865,
+      "bias_daylight": 599.0414090869656,
+      "daily_mae": 7884.645946549989,
+      "daily_bias": 7753.879997395329
+     },
+     "V3": {
+      "hours": 2208,
+      "daylight_hours": 1548,
+      "complete_days": 92,
+      "mae_daylight": 462.23037141872777,
+      "mae_all": 324.06374058251384,
+      "rmse_daylight": 719.6623677585234,
+      "rmse_all": 602.5800332030927,
+      "bias_daylight": 306.6630699919916,
+      "daily_mae": 5866.8441285879135,
+      "daily_bias": 5159.938131495684
+     },
+     "V4": {
+      "hours": 2113,
+      "daylight_hours": 1183,
+      "complete_days": 88,
+      "mae_daylight": 620.4803249910551,
+      "mae_all": 347.38683517009855,
+      "rmse_daylight": 895.4092983170937,
+      "rmse_all": 669.9836797308647,
+      "bias_daylight": 495.4476396089907,
+      "daily_mae": 7218.864043661902,
+      "daily_bias": 6660.390902357226
+     }
+    },
+    "physics_calibrated": {
+     "V1": {
+      "hours": 1920,
+      "daylight_hours": 744,
+      "complete_days": 80,
+      "mae_daylight": 662.5979358338377,
+      "mae_all": 256.75683229707045,
+      "rmse_daylight": 1030.90480823917,
+      "rmse_all": 641.7330678988199,
+      "bias_daylight": 645.4135296070496,
+      "daily_mae": 6018.724181750695,
+      "daily_bias": 6002.34265347056
+     },
+     "V2": {
+      "hours": 2135,
+      "daylight_hours": 1152,
+      "complete_days": 89,
+      "mae_daylight": 456.13179231865774,
+      "mae_all": 246.11906709653104,
+      "rmse_daylight": 697.0313519372719,
+      "rmse_all": 512.0113787109891,
+      "bias_daylight": 71.48089970704751,
+      "daily_mae": 4619.800685253531,
+      "daily_bias": 925.2316063204358
+     },
+     "V3": {
+      "hours": 2208,
+      "daylight_hours": 1548,
+      "complete_days": 92,
+      "mae_daylight": 453.4028735306757,
+      "mae_all": 317.8748969544774,
+      "rmse_daylight": 623.4111203211555,
+      "rmse_all": 521.9879632617665,
+      "bias_daylight": -212.54532930214293,
+      "daily_mae": 5971.632856854344,
+      "daily_bias": -3576.3075435838837
+     },
+     "V4": {
+      "hours": 2113,
+      "daylight_hours": 1183,
+      "complete_days": 88,
+      "mae_daylight": 453.4180576512116,
+      "mae_all": 253.8541033844692,
+      "rmse_daylight": 672.4716391340208,
+      "rmse_all": 503.17215171844055,
+      "bias_daylight": 69.10543736144766,
+      "daily_mae": 4586.497131278968,
+      "daily_bias": 928.9951607794607
+     }
+    },
+    "gbm": {
+     "V1": {
+      "hours": 1920,
+      "daylight_hours": 744,
+      "complete_days": 80,
+      "mae_daylight": 327.3245092228517,
+      "mae_all": 126.84512717350283,
+      "rmse_daylight": 571.8348426989043,
+      "rmse_all": 355.96437967265547,
+      "bias_daylight": -106.24678545181204,
+      "daily_mae": 2811.395148888445,
+      "daily_bias": -987.9359695409454
+     },
+     "V2": {
+      "hours": 2135,
+      "daylight_hours": 1152,
+      "complete_days": 89,
+      "mae_daylight": 463.1036281315871,
+      "mae_all": 249.90102681614044,
+      "rmse_daylight": 707.6813827799933,
+      "rmse_all": 519.8345845256877,
+      "bias_daylight": -8.494769601352308,
+      "daily_mae": 4952.225603217298,
+      "daily_bias": -109.47342624440932
+     },
+     "V3": {
+      "hours": 2208,
+      "daylight_hours": 1548,
+      "complete_days": 92,
+      "mae_daylight": 417.8569296749867,
+      "mae_all": 292.96641286945646,
+      "rmse_daylight": 630.016348227795,
+      "rmse_all": 527.5186563482717,
+      "bias_daylight": 264.54311577775724,
+      "daily_mae": 5286.709201985945,
+      "daily_bias": 4451.520806554906
+     },
+     "V4": {
+      "hours": 2113,
+      "daylight_hours": 1183,
+      "complete_days": 88,
+      "mae_daylight": 419.9006840182721,
+      "mae_all": 235.08989070888276,
+      "rmse_daylight": 640.3486953440366,
+      "rmse_all": 479.1363870612043,
+      "bias_daylight": 39.86922541774075,
+      "daily_mae": 4243.053183462442,
+      "daily_bias": 535.994903910586
+     }
+    },
+    "physics_residual_gbm": {
+     "V1": {
+      "hours": 1920,
+      "daylight_hours": 744,
+      "complete_days": 80,
+      "mae_daylight": 446.6483864191261,
+      "mae_all": 173.07638189886973,
+      "rmse_daylight": 776.6796298655267,
+      "rmse_all": 483.47917060234175,
+      "bias_daylight": 195.74939690653952,
+      "daily_mae": 3797.900851863336,
+      "daily_bias": 1820.4662193558179
+     },
+     "V2": {
+      "hours": 2135,
+      "daylight_hours": 1152,
+      "complete_days": 89,
+      "mae_daylight": 431.23302533441864,
+      "mae_all": 232.6842288923889,
+      "rmse_daylight": 654.9480528437949,
+      "rmse_all": 481.0986687902836,
+      "bias_daylight": 133.50435753929548,
+      "daily_mae": 4240.729008310196,
+      "daily_bias": 1728.052094216499
+     },
+     "V3": {
+      "hours": 2208,
+      "daylight_hours": 1548,
+      "complete_days": 92,
+      "mae_daylight": 393.8216813153861,
+      "mae_all": 276.1033002383232,
+      "rmse_daylight": 611.9434691089634,
+      "rmse_all": 512.3859916181581,
+      "bias_daylight": 242.29514559050227,
+      "daily_mae": 4962.025220924751,
+      "daily_bias": 4076.8778383054073
+     },
+     "V4": {
+      "hours": 2113,
+      "daylight_hours": 1183,
+      "complete_days": 88,
+      "mae_daylight": 435.82664273697645,
+      "mae_all": 244.0052421239201,
+      "rmse_daylight": 657.086190806346,
+      "rmse_all": 491.6600987342311,
+      "bias_daylight": 69.56971095938785,
+      "daily_mae": 4424.36746367635,
+      "daily_bias": 935.2364751699515
+     }
+    },
+    "gbm_without_lags": {
+     "V1": {
+      "hours": 1920,
+      "daylight_hours": 744,
+      "complete_days": 80,
+      "mae_daylight": 320.5193853465538,
+      "mae_all": 124.20143594514528,
+      "rmse_daylight": 564.1580413564088,
+      "rmse_all": 351.1855486426364,
+      "bias_daylight": -95.8514550050801,
+      "daily_mae": 2729.804298877877,
+      "daily_bias": -891.4205872724663
+     },
+     "V2": {
+      "hours": 2135,
+      "daylight_hours": 1152,
+      "complete_days": 89,
+      "mae_daylight": 455.7109873842621,
+      "mae_all": 245.89217233684462,
+      "rmse_daylight": 702.8507027989978,
+      "rmse_all": 516.2860413214999,
+      "bias_daylight": -3.8285319042847856,
+      "daily_mae": 4832.335832063795,
+      "daily_bias": -49.55556059575627
+     },
+     "V3": {
+      "hours": 2208,
+      "daylight_hours": 1548,
+      "complete_days": 92,
+      "mae_daylight": 418.0299906443733,
+      "mae_all": 293.07975801972066,
+      "rmse_daylight": 632.018059837346,
+      "rmse_all": 529.1946345218997,
+      "bias_daylight": 264.4577028694376,
+      "daily_mae": 5305.09014512346,
+      "daily_bias": 4449.8935242602465
+     },
+     "V4": {
+      "hours": 2113,
+      "daylight_hours": 1183,
+      "complete_days": 88,
+      "mae_daylight": 423.60299883137185,
+      "mae_all": 237.1616507632076,
+      "rmse_daylight": 647.3825661954257,
+      "rmse_all": 484.3994301940035,
+      "bias_daylight": 39.31874933400871,
+      "daily_mae": 4314.414291371886,
+      "daily_bias": 528.5681985425388
+     }
+    },
+    "gbm_without_temperature_cloud": {
+     "V1": {
+      "hours": 1920,
+      "daylight_hours": 744,
+      "complete_days": 80,
+      "mae_daylight": 342.47880889100276,
+      "mae_all": 132.71279938497767,
+      "rmse_daylight": 583.9856475683978,
+      "rmse_all": 363.52813835709287,
+      "bias_daylight": -100.39773738968444,
+      "daily_mae": 2983.1112347574717,
+      "daily_bias": -933.6506889015673
+     },
+     "V2": {
+      "hours": 2135,
+      "daylight_hours": 1152,
+      "complete_days": 89,
+      "mae_daylight": 435.91227463934035,
+      "mae_all": 235.20996251350732,
+      "rmse_daylight": 663.4797468371969,
+      "rmse_all": 487.36571065621786,
+      "bias_daylight": -6.1524967686001,
+      "daily_mae": 4597.996737092846,
+      "daily_bias": -79.6186707356789
+     },
+     "V3": {
+      "hours": 2208,
+      "daylight_hours": 1548,
+      "complete_days": 92,
+      "mae_daylight": 432.89591957828196,
+      "mae_all": 303.4993893250309,
+      "rmse_daylight": 657.5513291071227,
+      "rmse_all": 550.5738797286878,
+      "bias_daylight": 271.377205606403,
+      "daily_mae": 5497.2421275834195,
+      "daily_bias": 4566.256694580458
+     },
+     "V4": {
+      "hours": 2113,
+      "daylight_hours": 1183,
+      "complete_days": 88,
+      "mae_daylight": 427.4610089758504,
+      "mae_all": 239.32230669875392,
+      "rmse_daylight": 658.9356472379897,
+      "rmse_all": 493.04394156190125,
+      "bias_daylight": 54.11196544856732,
+      "daily_mae": 4278.247638431498,
+      "daily_bias": 727.4537847997971
+     }
+    },
+    "gbm_without_irradiance": {
+     "V1": {
+      "hours": 1920,
+      "daylight_hours": 744,
+      "complete_days": 80,
+      "mae_daylight": 347.1404404324428,
+      "mae_all": 134.5315891529225,
+      "rmse_daylight": 594.4643218247611,
+      "rmse_all": 370.0515001560921,
+      "bias_daylight": -141.78458475689817,
+      "daily_mae": 3000.8552722610466,
+      "daily_bias": -1318.2509258213722
+     },
+     "V2": {
+      "hours": 2135,
+      "daylight_hours": 1152,
+      "complete_days": 89,
+      "mae_daylight": 602.5330791332211,
+      "mae_all": 325.18919739680996,
+      "rmse_daylight": 926.7871833628952,
+      "rmse_all": 680.7819466827273,
+      "bias_daylight": -78.7692339217954,
+      "daily_mae": 6716.1482883018425,
+      "daily_bias": -1017.7738112028743
+     },
+     "V3": {
+      "hours": 2208,
+      "daylight_hours": 1548,
+      "complete_days": 92,
+      "mae_daylight": 461.7770065701034,
+      "mae_all": 323.77147995023944,
+      "rmse_daylight": 726.7644858561571,
+      "rmse_all": 608.526910563962,
+      "bias_daylight": 255.67730037164523,
+      "daily_mae": 6128.715501717865,
+      "daily_bias": 4302.662380816498
+     },
+     "V4": {
+      "hours": 2113,
+      "daylight_hours": 1183,
+      "complete_days": 88,
+      "mae_daylight": 516.1202590959044,
+      "mae_all": 289.0104531996978,
+      "rmse_daylight": 814.9592392463071,
+      "rmse_all": 609.7884479010655,
+      "bias_daylight": -75.87492728752505,
+      "daily_mae": 5671.294458854405,
+      "daily_bias": -1018.7668906811915
+     }
+    },
+    "gbm_without_calendar": {
+     "V1": {
+      "hours": 1920,
+      "daylight_hours": 744,
+      "complete_days": 80,
+      "mae_daylight": 276.0555583882035,
+      "mae_all": 106.97321843372907,
+      "rmse_daylight": 490.2682752269018,
+      "rmse_all": 305.18954415372997,
+      "bias_daylight": -154.88355785379974,
+      "daily_mae": 2355.5030389854655,
+      "daily_bias": -1440.3828823717733
+     },
+     "V2": {
+      "hours": 2135,
+      "daylight_hours": 1152,
+      "complete_days": 89,
+      "mae_daylight": 488.52279428648114,
+      "mae_all": 263.60680633050134,
+      "rmse_daylight": 754.29169678355,
+      "rmse_all": 554.0725597161563,
+      "bias_daylight": 44.81778895072351,
+      "daily_mae": 5219.0554459198875,
+      "daily_bias": 580.3578243703545
+     },
+     "V3": {
+      "hours": 2208,
+      "daylight_hours": 1548,
+      "complete_days": 92,
+      "mae_daylight": 423.08802031619985,
+      "mae_all": 296.6333703344183,
+      "rmse_daylight": 637.163915068679,
+      "rmse_all": 533.5033751915911,
+      "bias_daylight": 267.3032761721774,
+      "daily_mae": 5362.29664759254,
+      "daily_bias": 4497.951475691864
+     },
+     "V4": {
+      "hours": 2113,
+      "daylight_hours": 1183,
+      "complete_days": 88,
+      "mae_daylight": 390.4327440776512,
+      "mae_all": 218.59372603484687,
+      "rmse_daylight": 605.8975491959693,
+      "rmse_all": 453.3585650298504,
+      "bias_daylight": -44.572320466078146,
+      "daily_mae": 3845.915593624358,
+      "daily_bias": -599.1217470785169
+     }
+    },
+    "gbm_without_weather": {
+     "V1": {
+      "hours": 1920,
+      "daylight_hours": 744,
+      "complete_days": 80,
+      "mae_daylight": 432.4855296090859,
+      "mae_all": 167.58828812474476,
+      "rmse_daylight": 757.894733284382,
+      "rmse_all": 471.78566678338103,
+      "bias_daylight": -287.48477416016567,
+      "daily_mae": 3843.8419665221163,
+      "daily_bias": -2673.611253790807
+     },
+     "V2": {
+      "hours": 2135,
+      "daylight_hours": 1152,
+      "complete_days": 89,
+      "mae_daylight": 1165.2820225731843,
+      "mae_all": 628.783572983668,
+      "rmse_daylight": 1675.006637497464,
+      "rmse_all": 1230.393006970138,
+      "bias_daylight": -781.1164047935149,
+      "daily_mae": 14410.84621229693,
+      "daily_bias": -10110.09657310306
+     },
+     "V3": {
+      "hours": 2208,
+      "daylight_hours": 1548,
+      "complete_days": 92,
+      "mae_daylight": 696.244392918542,
+      "mae_all": 488.14741568251486,
+      "rmse_daylight": 1015.8466535963511,
+      "rmse_all": 850.5780244942101,
+      "bias_daylight": 44.39017025070867,
+      "daily_mae": 10355.217837795382,
+      "daily_bias": 747.3806373629292
+     },
+     "V4": {
+      "hours": 2113,
+      "daylight_hours": 1183,
+      "complete_days": 88,
+      "mae_daylight": 845.7998694284486,
+      "mae_all": 473.57739505805677,
+      "rmse_daylight": 1324.0457750219841,
+      "rmse_all": 990.7091165243938,
+      "bias_daylight": 151.09910506906468,
+      "daily_mae": 10248.980635043867,
+      "daily_bias": 2032.2484320592457
+     }
+    }
+   },
+   "candidates": [
+    "physics_calibrated",
+    "gbm",
+    "physics_residual_gbm"
+   ],
+   "vs_best_baseline": {
+    "physics_calibrated": {
+     "calendar_days": 353,
+     "days": 349,
+     "hours": 4627,
+     "difference": -126.63363735615097,
+     "low": -183.1740791377185,
+     "high": -68.51421329673963,
+     "daily_difference_autocorrelation": [
+      0.38299214273215165,
+      0.26991141358332704,
+      0.221878081604001,
+      0.1670071189018352,
+      0.1520915157848721,
+      0.1164673280900619,
+      0.1531121008315457,
+      0.1713134214216683,
+      0.22274602635081905,
+      0.11301297003426701,
+      0.18221270782733742,
+      0.209052933173226,
+      0.20931023193209855,
+      0.16598961244515523
+     ]
+    },
+    "gbm": {
+     "calendar_days": 353,
+     "days": 349,
+     "hours": 4627,
+     "difference": -199.2699132667741,
+     "low": -280.8871025963168,
+     "high": -124.53249274290945,
+     "daily_difference_autocorrelation": [
+      0.3538447747845529,
+      0.2573842777853107,
+      0.2589482798541892,
+      0.25185913801592613,
+      0.22984740892991812,
+      0.20617908060532023,
+      0.23975377997735364,
+      0.16078764081770072,
+      0.17259422082462778,
+      0.22076498972216962,
+      0.18213277154533955,
+      0.12861948449588737,
+      0.08550779161638122,
+      0.04840480925936376
+     ]
+    },
+    "physics_residual_gbm": {
+     "calendar_days": 353,
+     "days": 349,
+     "hours": 4627,
+     "difference": -191.9874678560856,
+     "low": -258.87240685938116,
+     "high": -132.1027602188155,
+     "daily_difference_autocorrelation": [
+      0.3610302255622961,
+      0.26026834382869346,
+      0.24758413567530432,
+      0.22002776306675736,
+      0.19323670444701135,
+      0.25716109252044095,
+      0.19064107911181583,
+      0.11851875316383251,
+      0.15609551109166353,
+      0.16236196117434648,
+      0.18639386671680633,
+      0.1956672066651445,
+      0.22455887961659726,
+      0.12279939724644788
+     ]
+    },
+    "gbm_without_lags": {
+     "calendar_days": 353,
+     "days": 349,
+     "hours": 4627,
+     "difference": -201.20023474945748,
+     "low": -284.7094382371782,
+     "high": -125.69093880006056,
+     "daily_difference_autocorrelation": [
+      0.36359881086528933,
+      0.2654917620408317,
+      0.2634031528260393,
+      0.2604042428644766,
+      0.23438814439280195,
+      0.2138669902929797,
+      0.25074682150583366,
+      0.14112541891157238,
+      0.16578928066497117,
+      0.2272667675270695,
+      0.18425314472006726,
+      0.13479741059052605,
+      0.0705542264967916,
+      0.0489362329879288
+     ]
+    },
+    "gbm_without_temperature_cloud": {
+     "calendar_days": 353,
+     "days": 349,
+     "hours": 4627,
+     "difference": -196.6387093495162,
+     "low": -279.4567191656565,
+     "high": -120.15445759493001,
+     "daily_difference_autocorrelation": [
+      0.35217867884372306,
+      0.27536234658144876,
+      0.2858570058570433,
+      0.26664635529297687,
+      0.2205297388572049,
+      0.22817571745970014,
+      0.25120388844106223,
+      0.17140359122012158,
+      0.18800694607715424,
+      0.22661583152388956,
+      0.1746728000699547,
+      0.14210394920619795,
+      0.1026540172462223,
+      0.0725742849874991
+     ]
+    },
+    "gbm_without_irradiance": {
+     "calendar_days": 353,
+     "days": 349,
+     "hours": 4627,
+     "difference": -122.07479402659732,
+     "low": -209.63084851440345,
+     "high": -44.63647741168097,
+     "daily_difference_autocorrelation": [
+      0.3056656678799958,
+      0.211651092865397,
+      0.18543543752827002,
+      0.2114758391178497,
+      0.22301416093190077,
+      0.1291728432128649,
+      0.20980123456421615,
+      0.16596374908006675,
+      0.18667708415108747,
+      0.20275262657095514,
+      0.14440424699355933,
+      0.12118052769881167,
+      0.09634197705688229,
+      0.017184243449953628
+     ]
+    },
+    "gbm_without_calendar": {
+     "calendar_days": 353,
+     "days": 349,
+     "hours": 4627,
+     "difference": -206.9690843598575,
+     "low": -296.82135498354563,
+     "high": -130.25574125176857,
+     "daily_difference_autocorrelation": [
+      0.36564212423365244,
+      0.29180880789766434,
+      0.2831792558218139,
+      0.24707967594081734,
+      0.25286888080640474,
+      0.23236545174262713,
+      0.24264548796853555,
+      0.15633213561445122,
+      0.20830684715835693,
+      0.23676213476019942,
+      0.18354102555204876,
+      0.178382888079546,
+      0.14671690536357623,
+      0.07118187333313254
+     ]
+    },
+    "gbm_without_weather": {
+     "calendar_days": 353,
+     "days": 349,
+     "hours": 4627,
+     "difference": 194.49102016857077,
+     "low": 49.65053381627532,
+     "high": 327.3952215472773,
+     "daily_difference_autocorrelation": [
+      0.44570559647109215,
+      0.35944540055278595,
+      0.25906437659779374,
+      0.23227974754405217,
+      0.2241100335342288,
+      0.13117710559580545,
+      0.23510456880087907,
+      0.12557664770108443,
+      0.1661567088285545,
+      0.1255641756850757,
+      0.14642874335019637,
+      0.1577911265034613,
+      0.12085266883656845,
+      0.1486071731741924
+     ]
+    }
+   },
+   "elia_subset": {
+    "persistence": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 782.7389844901533,
+     "mae_all": 432.41126148948655,
+     "rmse_daylight": 1251.653853105817,
+     "rmse_all": 930.2846026429266,
+     "bias_daylight": -0.961739184136942,
+     "daily_mae": 9210.116994214632,
+     "daily_bias": -12.34357651862931
+    },
+    "physics": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 614.3574107381129,
+     "mae_all": 339.3783022009609,
+     "rmse_daylight": 933.5658757866016,
+     "rmse_all": 693.8672413196288,
+     "bias_daylight": 511.83506075306815,
+     "daily_mae": 7146.358349560194,
+     "daily_bias": 6785.845003880934
+    },
+    "physics_calibrated": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 487.723773381962,
+     "mae_all": 269.4244053472229,
+     "rmse_daylight": 733.1406303506021,
+     "rmse_all": 544.9023790157222,
+     "bias_daylight": 68.13598987011864,
+     "daily_mae": 5288.430274815956,
+     "daily_bias": 903.3361185645813
+    },
+    "gbm": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 415.08749747133896,
+     "mae_all": 229.30946933013544,
+     "rmse_daylight": 644.1267446819592,
+     "rmse_all": 478.74340700278583,
+     "bias_daylight": 79.49955779905976,
+     "daily_mae": 4370.847041045321,
+     "daily_bias": 1054.2391210548851
+    },
+    "physics_residual_gbm": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 422.36994288202743,
+     "mae_all": 233.32218785400437,
+     "rmse_daylight": 662.9247691642748,
+     "rmse_all": 492.7148610692638,
+     "bias_daylight": 163.56352380004046,
+     "daily_mae": 4375.66649575149,
+     "daily_bias": 2168.5028792916532
+    },
+    "elia": {
+     "hours": 8376,
+     "daylight_hours": 4627,
+     "complete_days": 349,
+     "mae_daylight": 308.015215906635,
+     "mae_all": 170.15130742597898,
+     "rmse_daylight": 480.7365328613319,
+     "rmse_all": 357.3045464901542,
+     "bias_daylight": 37.88048606008213,
+     "daily_mae": 3026.5373839541553,
+     "daily_bias": 502.2134999999995
+    }
+   },
+   "resources": {
+    "physics_calibrated": {
+     "artifact_mb": 0.000125885009765625,
+     "load_s": 0.5662147919938434,
+     "predict_s": 1.3249984476715326e-05,
+     "peak_rss_mb": 190.21875,
+     "inputs": 1,
+     "fit_s_refit_recipe": 0.00016737499390728772,
+     "refit_rows": 24397,
+     "refit_last_target": "2025-10-30"
+    },
+    "gbm": {
+     "artifact_mb": 1.4000873565673828,
+     "load_s": 0.501459541002987,
+     "predict_s": 0.010747958003776148,
+     "peak_rss_mb": 194.359375,
+     "inputs": 14,
+     "fit_s_refit_recipe": 1.8545544579974376,
+     "refit_rows": 24397,
+     "refit_last_target": "2025-10-30"
+    },
+    "physics_residual_gbm": {
+     "artifact_mb": 1.4023666381835938,
+     "load_s": 0.47756429100991227,
+     "predict_s": 0.01230120801483281,
+     "peak_rss_mb": 194.171875,
+     "inputs": 15,
+     "fit_s_refit_recipe": 1.8134373339999001,
+     "refit_rows": 24397,
+     "refit_last_target": "2025-10-30"
+    }
+   }
+  }
+ },
+ "resources": {
+  "physics_calibrated": {
+   "artifact_mb": 0.000125885009765625,
+   "load_s": 0.5662147919938434,
+   "predict_s": 1.3249984476715326e-05,
+   "peak_rss_mb": 190.21875,
+   "inputs": 1,
+   "fit_s_refit_recipe": 0.00016737499390728772,
+   "refit_rows": 24397,
+   "refit_last_target": "2025-10-30"
+  },
+  "gbm": {
+   "artifact_mb": 1.4000873565673828,
+   "load_s": 0.501459541002987,
+   "predict_s": 0.010747958003776148,
+   "peak_rss_mb": 194.359375,
+   "inputs": 14,
+   "fit_s_refit_recipe": 1.8545544579974376,
+   "refit_rows": 24397,
+   "refit_last_target": "2025-10-30"
+  },
+  "physics_residual_gbm": {
+   "artifact_mb": 1.4023666381835938,
+   "load_s": 0.47756429100991227,
+   "predict_s": 0.01230120801483281,
+   "peak_rss_mb": 194.171875,
+   "inputs": 15,
+   "fit_s_refit_recipe": 1.8134373339999001,
+   "refit_rows": 24397,
+   "refit_last_target": "2025-10-30"
+  }
+ },
+ "selection": {
+  "best_baseline": "physics",
+  "checks": {
+   "physics_calibrated": {
+    "improvement": 0.21919841111565763,
+    "interval_high": -79.40756628533786,
+    "folds_better": 4,
+    "passes": true
+   },
+   "gbm": {
+    "improvement": 0.3184589754466993,
+    "interval_high": -120.73315003393172,
+    "folds_better": 4,
+    "passes": true
+   },
+   "physics_residual_gbm": {
+    "improvement": 0.30407886560754815,
+    "interval_high": -127.29476889477948,
+    "folds_better": 4,
+    "passes": true
+   }
+  },
+  "selected": "gbm",
+  "within_2_percent": [
+   "gbm"
+  ],
+  "reason": "passes the rule",
+  "applies_to": "11h"
+ },
+ "intervals": {
+  "11h": {
+   "folds_evaluated": [
+    "V2",
+    "V3",
+    "V4"
+   ],
+   "methods": {
+    "load factor, per local hour": {
+     "0.8": {
+      "coverage": 0.49034251867113055,
+      "mean_width": 1057.2757367904092,
+      "by_fold": {
+       "V2": 0.3420138888888889,
+       "V3": 0.35917312661498707,
+       "V4": 0.8064243448858833
+      },
+      "by_lead": {
+       "27": {
+        "coverage": 0.19736842105263158,
+        "width": 1.551343723979255e-07
+       },
+       "28": {
+        "coverage": 0.2013888888888889,
+        "width": 5.960709210986311
+       },
+       "29": {
+        "coverage": 0.38571428571428573,
+        "width": 93.17992949613512
+       },
+       "30": {
+        "coverage": 0.44573643410852715,
+        "width": 368.7131026931411
+       },
+       "31": {
+        "coverage": 0.5390334572490706,
+        "width": 867.9131108441758
+       },
+       "32": {
+        "coverage": 0.5539033457249071,
+        "width": 1438.530303610245
+       },
+       "33": {
+        "coverage": 0.6765799256505576,
+        "width": 2022.3979176086864
+       },
+       "34": {
+        "coverage": 0.7732342007434945,
+        "width": 2408.864832497653
+       },
+       "35": {
+        "coverage": 0.7769516728624535,
+        "width": 2539.380506943827
+       },
+       "36": {
+        "coverage": 0.7174721189591078,
+        "width": 2140.2526113157287
+       },
+       "37": {
+        "coverage": 0.6505576208178439,
+        "width": 1573.1293849233034
+       },
+       "38": {
+        "coverage": 0.49814126394052044,
+        "width": 1004.8446518353837
+       },
+       "39": {
+        "coverage": 0.40148698884758366,
+        "width": 556.6411880358341
+       },
+       "40": {
+        "coverage": 0.2936802973977695,
+        "width": 203.35171985407038
+       },
+       "41": {
+        "coverage": 0.19827586206896552,
+        "width": 74.368182184097
+       },
+       "42": {
+        "coverage": 0.17751479289940827,
+        "width": 19.228177441709278
+       },
+       "43": {
+        "coverage": 0.057692307692307696,
+        "width": 1.6079104468461485
+       }
+      },
+      "hours": 3883
+     },
+     "0.95": {
+      "coverage": 0.6922482616533608,
+      "mean_width": 1806.6854986732508,
+      "by_fold": {
+       "V2": 0.4904513888888889,
+       "V3": 0.6440568475452196,
+       "V4": 0.9518174133558749
+      },
+      "by_lead": {
+       "27": {
+        "coverage": 0.19736842105263158,
+        "width": 1.551343723979255e-07
+       },
+       "28": {
+        "coverage": 0.25,
+        "width": 21.180803407714507
+       },
+       "29": {
+        "coverage": 0.6,
+        "width": 240.20416316992743
+       },
+       "30": {
+        "coverage": 0.6201550387596899,
+        "width": 646.0156586504236
+       },
+       "31": {
+        "coverage": 0.7472118959107806,
+        "width": 1392.987106558531
+       },
+       "32": {
+        "coverage": 0.8364312267657993,
+        "width": 2391.003549278369
+       },
+       "33": {
+        "coverage": 0.9070631970260223,
+        "width": 3306.8444951501497
+       },
+       "34": {
+        "coverage": 0.9256505576208178,
+        "width": 3717.461516284518
+       },
+       "35": {
+        "coverage": 0.929368029739777,
+        "width": 4074.0809677569127
+       },
+       "36": {
+        "coverage": 0.929368029739777,
+        "width": 3696.082375227923
+       },
+       "37": {
+        "coverage": 0.8996282527881041,
+        "width": 2916.6509653612698
+       },
+       "38": {
+        "coverage": 0.7620817843866171,
+        "width": 1853.408891087985
+       },
+       "39": {
+        "coverage": 0.6431226765799256,
+        "width": 1101.7727052151479
+       },
+       "40": {
+        "coverage": 0.5613382899628253,
+        "width": 540.7755065574819
+       },
+       "41": {
+        "coverage": 0.43103448275862066,
+        "width": 265.34772086000004
+       },
+       "42": {
+        "coverage": 0.30177514792899407,
+        "width": 61.768735496280826
+       },
+       "43": {
+        "coverage": 0.09615384615384616,
+        "width": 5.749430761407187
+       }
+      },
+      "hours": 3883
+     },
+     "usable": false
+    },
+    "clear-sky scaled, pooled": {
+     "0.8": {
+      "coverage": 0.8192119495235642,
+      "mean_width": 2471.823016907155,
+      "by_fold": {
+       "V2": 0.8168402777777778,
+       "V3": 0.8888888888888888,
+       "V4": 0.7303465765004227
+      },
+      "by_lead": {
+       "27": {
+        "coverage": 0.039473684210526314,
+        "width": 0.0
+       },
+       "28": {
+        "coverage": 0.6180555555555556,
+        "width": 214.37195974046324
+       },
+       "29": {
+        "coverage": 0.7380952380952381,
+        "width": 679.4749999408397
+       },
+       "30": {
+        "coverage": 0.7713178294573644,
+        "width": 1266.6320370648411
+       },
+       "31": {
+        "coverage": 0.8810408921933085,
+        "width": 2079.619541463811
+       },
+       "32": {
+        "coverage": 0.9070631970260223,
+        "width": 2951.757167589051
+       },
+       "33": {
+        "coverage": 0.9033457249070632,
+        "width": 3649.3523865396432
+       },
+       "34": {
+        "coverage": 0.9368029739776952,
+        "width": 4112.7013095971715
+       },
+       "35": {
+        "coverage": 0.8884758364312267,
+        "width": 4310.795433418436
+       },
+       "36": {
+        "coverage": 0.9033457249070632,
+        "width": 4243.94251573128
+       },
+       "37": {
+        "coverage": 0.9107806691449815,
+        "width": 3911.083122385752
+       },
+       "38": {
+        "coverage": 0.9070631970260223,
+        "width": 3321.594852446549
+       },
+       "39": {
+        "coverage": 0.9182156133828996,
+        "width": 2524.960045471033
+       },
+       "40": {
+        "coverage": 0.828996282527881,
+        "width": 1614.599166291858
+       },
+       "41": {
+        "coverage": 0.7370689655172413,
+        "width": 944.5474050946943
+       },
+       "42": {
+        "coverage": 0.6627218934911243,
+        "width": 431.2256379578112
+       },
+       "43": {
+        "coverage": 0.33653846153846156,
+        "width": 37.85745758949879
+       }
+      },
+      "hours": 3883
+     },
+     "0.95": {
+      "coverage": 0.886170486737059,
+      "mean_width": 4521.994297576072,
+      "by_fold": {
+       "V2": 0.8723958333333334,
+       "V3": 0.91343669250646,
+       "V4": 0.863905325443787
+      },
+      "by_lead": {
+       "27": {
+        "coverage": 0.039473684210526314,
+        "width": 0.0
+       },
+       "28": {
+        "coverage": 0.6319444444444444,
+        "width": 384.9232571644387
+       },
+       "29": {
+        "coverage": 0.7666666666666667,
+        "width": 1247.0379531481744
+       },
+       "30": {
+        "coverage": 0.8449612403100775,
+        "width": 2363.186997838359
+       },
+       "31": {
+        "coverage": 0.9739776951672863,
+        "width": 3899.361728589336
+       },
+       "32": {
+        "coverage": 0.9814126394052045,
+        "width": 5536.63246473043
+       },
+       "33": {
+        "coverage": 0.9925650557620818,
+        "width": 6712.208051314278
+       },
+       "34": {
+        "coverage": 0.9925650557620818,
+        "width": 7391.719865431783
+       },
+       "35": {
+        "coverage": 0.9851301115241635,
+        "width": 7629.6845557787965
+       },
+       "36": {
+        "coverage": 0.9888475836431226,
+        "width": 7595.329625575313
+       },
+       "37": {
+        "coverage": 0.9851301115241635,
+        "width": 7161.357013774708
+       },
+       "38": {
+        "coverage": 0.9888475836431226,
+        "width": 6186.198239506925
+       },
+       "39": {
+        "coverage": 0.9925650557620818,
+        "width": 4695.950836706646
+       },
+       "40": {
+        "coverage": 0.8996282527881041,
+        "width": 2998.5517560792146
+       },
+       "41": {
+        "coverage": 0.7801724137931034,
+        "width": 1738.0265212236861
+       },
+       "42": {
+        "coverage": 0.7041420118343196,
+        "width": 788.082457302416
+       },
+       "43": {
+        "coverage": 0.3557692307692308,
+        "width": 71.20366981414008
+       }
+      },
+      "hours": 3883
+     },
+     "usable": false
+    },
+    "clear-sky scaled, per local hour": {
+     "0.8": {
+      "coverage": 0.701776976564512,
+      "mean_width": 2772.5550837834335,
+      "by_fold": {
+       "V2": 0.6041666666666666,
+       "V3": 0.7590439276485789,
+       "V4": 0.7218934911242604
+      },
+      "by_lead": {
+       "27": {
+        "coverage": 0.0,
+        "width": NaN
+       },
+       "28": {
+        "coverage": 0.0,
+        "width": 0.8897881490655923
+       },
+       "29": {
+        "coverage": 0.5761904761904761,
+        "width": 617.7252925823491
+       },
+       "30": {
+        "coverage": 0.6434108527131783,
+        "width": 1088.3195515805958
+       },
+       "31": {
+        "coverage": 0.8327137546468402,
+        "width": 2139.930466133396
+       },
+       "32": {
+        "coverage": 0.895910780669145,
+        "width": 3169.5021032622485
+       },
+       "33": {
+        "coverage": 0.8921933085501859,
+        "width": 3710.5697877683965
+       },
+       "34": {
+        "coverage": 0.9368029739776952,
+        "width": 4460.924721015399
+       },
+       "35": {
+        "coverage": 0.9144981412639405,
+        "width": 4711.52946357912
+       },
+       "36": {
+        "coverage": 0.8996282527881041,
+        "width": 4401.437618164606
+       },
+       "37": {
+        "coverage": 0.9144981412639405,
+        "width": 3776.237398916268
+       },
+       "38": {
+        "coverage": 0.9256505576208178,
+        "width": 3347.8211656372905
+       },
+       "39": {
+        "coverage": 0.7769516728624535,
+        "width": 2023.9900041862509
+       },
+       "40": {
+        "coverage": 0.5092936802973977,
+        "width": 967.3782120731388
+       },
+       "41": {
+        "coverage": 0.4482758620689655,
+        "width": 480.418725228506
+       },
+       "42": {
+        "coverage": 0.28402366863905326,
+        "width": 135.4723115910556
+       },
+       "43": {
+        "coverage": 0.0,
+        "width": 0.0
+       }
+      },
+      "hours": 3883
+     },
+     "0.95": {
+      "coverage": 0.7744012361576101,
+      "mean_width": 4885.911599740127,
+      "by_fold": {
+       "V2": 0.6614583333333334,
+       "V3": 0.8081395348837209,
+       "V4": 0.8402366863905325
+      },
+      "by_lead": {
+       "27": {
+        "coverage": 0.0,
+        "width": NaN
+       },
+       "28": {
+        "coverage": 0.0,
+        "width": 1.277399996196668
+       },
+       "29": {
+        "coverage": 0.6095238095238096,
+        "width": 946.5161423977115
+       },
+       "30": {
+        "coverage": 0.7325581395348837,
+        "width": 1957.4916599220514
+       },
+       "31": {
+        "coverage": 0.9182156133828996,
+        "width": 3852.6704589436345
+       },
+       "32": {
+        "coverage": 0.9776951672862454,
+        "width": 5585.787045433288
+       },
+       "33": {
+        "coverage": 0.9814126394052045,
+        "width": 6817.869905964622
+       },
+       "34": {
+        "coverage": 0.9888475836431226,
+        "width": 7378.226708890371
+       },
+       "35": {
+        "coverage": 0.9888475836431226,
+        "width": 7709.657660956998
+       },
+       "36": {
+        "coverage": 0.9888475836431226,
+        "width": 7950.239533277648
+       },
+       "37": {
+        "coverage": 0.9888475836431226,
+        "width": 7001.445446341548
+       },
+       "38": {
+        "coverage": 0.9925650557620818,
+        "width": 5985.736717032551
+       },
+       "39": {
+        "coverage": 0.862453531598513,
+        "width": 3239.1350562133
+       },
+       "40": {
+        "coverage": 0.5762081784386617,
+        "width": 2442.1896456883883
+       },
+       "41": {
+        "coverage": 0.5344827586206896,
+        "width": 754.2462483415127
+       },
+       "42": {
+        "coverage": 0.4378698224852071,
+        "width": 222.04308752478846
+       },
+       "43": {
+        "coverage": 0.0,
+        "width": 0.0
+       }
+      },
+      "hours": 3883
+     },
+     "usable": false
+    },
+    "prediction scaled, pooled": {
+     "0.8": {
+      "coverage": 0.8377543136749935,
+      "mean_width": 3479.1038985942764,
+      "by_fold": {
+       "V2": 0.875,
+       "V3": 0.8908268733850129,
+       "V4": 0.7320371935756551
+      },
+      "by_lead": {
+       "27": {
+        "coverage": 0.039473684210526314,
+        "width": 0.0
+       },
+       "28": {
+        "coverage": 0.6111111111111112,
+        "width": 183.68268353896414
+       },
+       "29": {
+        "coverage": 0.7523809523809524,
+        "width": 698.9521416879227
+       },
+       "30": {
+        "coverage": 0.810077519379845,
+        "width": 1586.6501427833134
+       },
+       "31": {
+        "coverage": 0.9107806691449815,
+        "width": 3011.4038006653354
+       },
+       "32": {
+        "coverage": 0.9182156133828996,
+        "width": 4496.387968362202
+       },
+       "33": {
+        "coverage": 0.9256505576208178,
+        "width": 5443.713504859717
+       },
+       "34": {
+        "coverage": 0.9479553903345725,
+        "width": 5836.26585719258
+       },
+       "35": {
+        "coverage": 0.9405204460966543,
+        "width": 5962.783366037806
+       },
+       "36": {
+        "coverage": 0.9405204460966543,
+        "width": 5874.634412079804
+       },
+       "37": {
+        "coverage": 0.929368029739777,
+        "width": 5575.785479094625
+       },
+       "38": {
+        "coverage": 0.929368029739777,
+        "width": 4908.737749028702
+       },
+       "39": {
+        "coverage": 0.9033457249070632,
+        "width": 3678.3596154365355
+       },
+       "40": {
+        "coverage": 0.8438661710037175,
+        "width": 2092.7366073928983
+       },
+       "41": {
+        "coverage": 0.75,
+        "width": 1047.690376115736
+       },
+       "42": {
+        "coverage": 0.6745562130177515,
+        "width": 401.73777293462337
+       },
+       "43": {
+        "coverage": 0.33653846153846156,
+        "width": 46.91486013651218
+       }
+      },
+      "hours": 3883
+     },
+     "0.95": {
+      "coverage": 0.9008498583569405,
+      "mean_width": 5718.969049124552,
+      "by_fold": {
+       "V2": 0.9105902777777778,
+       "V3": 0.9121447028423773,
+       "V4": 0.8765849535080305
+      },
+      "by_lead": {
+       "27": {
+        "coverage": 0.039473684210526314,
+        "width": 0.0
+       },
+       "28": {
+        "coverage": 0.6458333333333334,
+        "width": 415.3395823040024
+       },
+       "29": {
+        "coverage": 0.8142857142857143,
+        "width": 1515.8278813154943
+       },
+       "30": {
+        "coverage": 0.872093023255814,
+        "width": 3323.2587816558334
+       },
+       "31": {
+        "coverage": 0.9851301115241635,
+        "width": 5753.263792607902
+       },
+       "32": {
+        "coverage": 0.9962825278810409,
+        "width": 7549.199062903516
+       },
+       "33": {
+        "coverage": 0.9962825278810409,
+        "width": 8438.750574561725
+       },
+       "34": {
+        "coverage": 1.0,
+        "width": 8792.046515383368
+       },
+       "35": {
+        "coverage": 0.9925650557620818,
+        "width": 8873.534266637644
+       },
+       "36": {
+        "coverage": 0.9925650557620818,
+        "width": 8853.611941801519
+       },
+       "37": {
+        "coverage": 0.9962825278810409,
+        "width": 8549.30356876066
+       },
+       "38": {
+        "coverage": 0.9925650557620818,
+        "width": 7863.249896110797
+       },
+       "39": {
+        "coverage": 0.9925650557620818,
+        "width": 6598.7417596648565
+       },
+       "40": {
+        "coverage": 0.9144981412639405,
+        "width": 4189.910375546512
+       },
+       "41": {
+        "coverage": 0.8318965517241379,
+        "width": 2193.420414331543
+       },
+       "42": {
+        "coverage": 0.7337278106508875,
+        "width": 900.082904447525
+       },
+       "43": {
+        "coverage": 0.3557692307692308,
+        "width": 106.36719575609051
+       }
+      },
+      "hours": 3883
+     },
+     "usable": false
+    }
+   },
+   "frozen": null
+  },
+  "18h": {
+   "folds_evaluated": [
+    "V2",
+    "V3",
+    "V4"
+   ],
+   "methods": {
+    "load factor, per local hour": {
+     "0.8": {
+      "coverage": 0.4990986350759722,
+      "mean_width": 1032.6557067631204,
+      "by_fold": {
+       "V2": 0.3394097222222222,
+       "V3": 0.3798449612403101,
+       "V4": 0.8106508875739645
+      },
+      "by_lead": {
+       "21": {
+        "coverage": 0.21052631578947367,
+        "width": 1.5873961729476378e-07
+       },
+       "22": {
+        "coverage": 0.2013888888888889,
+        "width": 4.896690536053871
+       },
+       "23": {
+        "coverage": 0.36666666666666664,
+        "width": 88.59205625362435
+       },
+       "24": {
+        "coverage": 0.4806201550387597,
+        "width": 357.92800405490794
+       },
+       "25": {
+        "coverage": 0.550185873605948,
+        "width": 847.3126298432302
+       },
+       "26": {
+        "coverage": 0.6022304832713755,
+        "width": 1475.9213275843908
+       },
+       "27": {
+        "coverage": 0.7174721189591078,
+        "width": 2132.663913884478
+       },
+       "28": {
+        "coverage": 0.7695167286245354,
+        "width": 2280.783247752434
+       },
+       "29": {
+        "coverage": 0.7955390334572491,
+        "width": 2312.4554074364055
+       },
+       "30": {
+        "coverage": 0.7360594795539034,
+        "width": 2070.542153104677
+       },
+       "31": {
+        "coverage": 0.6356877323420075,
+        "width": 1569.9402386467864
+       },
+       "32": {
+        "coverage": 0.49070631970260226,
+        "width": 990.4810685817653
+       },
+       "33": {
+        "coverage": 0.40892193308550184,
+        "width": 533.3736812233304
+       },
+       "34": {
+        "coverage": 0.2899628252788104,
+        "width": 208.95077005779862
+       },
+       "35": {
+        "coverage": 0.1810344827586207,
+        "width": 66.6982864806616
+       },
+       "36": {
+        "coverage": 0.1834319526627219,
+        "width": 16.986769584249892
+       },
+       "37": {
+        "coverage": 0.057692307692307696,
+        "width": 1.637391117755971
+       }
+      },
+      "hours": 3883
+     },
+     "0.95": {
+      "coverage": 0.6966263198557816,
+      "mean_width": 1783.157585067334,
+      "by_fold": {
+       "V2": 0.4852430555555556,
+       "V3": 0.66343669250646,
+       "V4": 0.9459002535925612
+      },
+      "by_lead": {
+       "21": {
+        "coverage": 0.21052631578947367,
+        "width": 1.5873961729476378e-07
+       },
+       "22": {
+        "coverage": 0.2638888888888889,
+        "width": 24.602246458757556
+       },
+       "23": {
+        "coverage": 0.5619047619047619,
+        "width": 230.57325414531556
+       },
+       "24": {
+        "coverage": 0.6744186046511628,
+        "width": 670.19779468549
+       },
+       "25": {
+        "coverage": 0.7323420074349443,
+        "width": 1425.3706230822293
+       },
+       "26": {
+        "coverage": 0.828996282527881,
+        "width": 2422.3539683773747
+       },
+       "27": {
+        "coverage": 0.9070631970260223,
+        "width": 3293.5074676291165
+       },
+       "28": {
+        "coverage": 0.9368029739776952,
+        "width": 3650.992702129688
+       },
+       "29": {
+        "coverage": 0.9442379182156134,
+        "width": 3698.4657088562512
+       },
+       "30": {
+        "coverage": 0.9182156133828996,
+        "width": 3540.4663402350234
+       },
+       "31": {
+        "coverage": 0.8921933085501859,
+        "width": 2900.990576491914
+       },
+       "32": {
+        "coverage": 0.7732342007434945,
+        "width": 2023.3667405671283
+       },
+       "33": {
+        "coverage": 0.6468401486988847,
+        "width": 1138.3442716809443
+       },
+       "34": {
+        "coverage": 0.5353159851301115,
+        "width": 529.8803310617598
+       },
+       "35": {
+        "coverage": 0.49137931034482757,
+        "width": 278.10217231354704
+       },
+       "36": {
+        "coverage": 0.3076923076923077,
+        "width": 60.30310814437114
+       },
+       "37": {
+        "coverage": 0.09615384615384616,
+        "width": 6.058819825423931
+       }
+      },
+      "hours": 3883
+     },
+     "usable": false
+    },
+    "clear-sky scaled, pooled": {
+     "0.8": {
+      "coverage": 0.8207571465361834,
+      "mean_width": 2441.8293050882107,
+      "by_fold": {
+       "V2": 0.8211805555555556,
+       "V3": 0.8888888888888888,
+       "V4": 0.7311918850380389
+      },
+      "by_lead": {
+       "21": {
+        "coverage": 0.013157894736842105,
+        "width": 0.0
+       },
+       "22": {
+        "coverage": 0.6041666666666666,
+        "width": 211.18069908697498
+       },
+       "23": {
+        "coverage": 0.7238095238095238,
+        "width": 668.8004472180414
+       },
+       "24": {
+        "coverage": 0.8023255813953488,
+        "width": 1247.753253787025
+       },
+       "25": {
+        "coverage": 0.8847583643122676,
+        "width": 2052.686726144925
+       },
+       "26": {
+        "coverage": 0.9033457249070632,
+        "width": 2912.6269509890417
+       },
+       "27": {
+        "coverage": 0.8921933085501859,
+        "width": 3602.5269837103265
+       },
+       "28": {
+        "coverage": 0.9330855018587361,
+        "width": 4065.76497752477
+       },
+       "29": {
+        "coverage": 0.929368029739777,
+        "width": 4260.98598624972
+       },
+       "30": {
+        "coverage": 0.9033457249070632,
+        "width": 4196.425155201557
+       },
+       "31": {
+        "coverage": 0.9033457249070632,
+        "width": 3868.285637566199
+       },
+       "32": {
+        "coverage": 0.9144981412639405,
+        "width": 3281.5970511438463
+       },
+       "33": {
+        "coverage": 0.9144981412639405,
+        "width": 2495.86078550513
+       },
+       "34": {
+        "coverage": 0.8178438661710037,
+        "width": 1593.9477190182881
+       },
+       "35": {
+        "coverage": 0.7456896551724138,
+        "width": 931.6246994567821
+       },
+       "36": {
+        "coverage": 0.6627218934911243,
+        "width": 425.4742927025854
+       },
+       "37": {
+        "coverage": 0.33653846153846156,
+        "width": 36.94429907666551
+       }
+      },
+      "hours": 3883
+     },
+     "0.95": {
+      "coverage": 0.8892608807622971,
+      "mean_width": 4574.751751660721,
+      "by_fold": {
+       "V2": 0.8810763888888888,
+       "V3": 0.9127906976744186,
+       "V4": 0.8664412510566357
+      },
+      "by_lead": {
+       "21": {
+        "coverage": 0.013157894736842105,
+        "width": 0.0
+       },
+       "22": {
+        "coverage": 0.6319444444444444,
+        "width": 388.5964317042248
+       },
+       "23": {
+        "coverage": 0.7666666666666667,
+        "width": 1252.402637027147
+       },
+       "24": {
+        "coverage": 0.8643410852713178,
+        "width": 2365.379803972327
+       },
+       "25": {
+        "coverage": 0.9739776951672863,
+        "width": 3939.310213546531
+       },
+       "26": {
+        "coverage": 0.9888475836431226,
+        "width": 5606.564094454853
+       },
+       "27": {
+        "coverage": 0.9962825278810409,
+        "width": 6805.284910191667
+       },
+       "28": {
+        "coverage": 0.9962825278810409,
+        "width": 7485.902010591427
+       },
+       "29": {
+        "coverage": 0.9925650557620818,
+        "width": 7770.607741020715
+       },
+       "30": {
+        "coverage": 0.9962825278810409,
+        "width": 7686.732029854414
+       },
+       "31": {
+        "coverage": 0.9962825278810409,
+        "width": 7240.992100469844
+       },
+       "32": {
+        "coverage": 0.9888475836431226,
+        "width": 6259.349024407652
+       },
+       "33": {
+        "coverage": 0.9925650557620818,
+        "width": 4737.069513336887
+       },
+       "34": {
+        "coverage": 0.8921933085501859,
+        "width": 3018.7120759802474
+       },
+       "35": {
+        "coverage": 0.7801724137931034,
+        "width": 1746.1799197689681
+       },
+       "36": {
+        "coverage": 0.7041420118343196,
+        "width": 792.5182822857778
+       },
+       "37": {
+        "coverage": 0.3557692307692308,
+        "width": 71.06165589540643
+       }
+      },
+      "hours": 3883
+     },
+     "usable": false
+    },
+    "clear-sky scaled, per local hour": {
+     "0.8": {
+      "coverage": 0.7066701004378059,
+      "mean_width": 2713.183557396355,
+      "by_fold": {
+       "V2": 0.6059027777777778,
+       "V3": 0.7713178294573644,
+       "V4": 0.7202028740490279
+      },
+      "by_lead": {
+       "21": {
+        "coverage": 0.0,
+        "width": NaN
+       },
+       "22": {
+        "coverage": 0.0,
+        "width": 0.974686207413667
+       },
+       "23": {
+        "coverage": 0.5523809523809524,
+        "width": 611.9234661955043
+       },
+       "24": {
+        "coverage": 0.6744186046511628,
+        "width": 1121.4932259196312
+       },
+       "25": {
+        "coverage": 0.8513011152416357,
+        "width": 2108.2944533294444
+       },
+       "26": {
+        "coverage": 0.9182156133828996,
+        "width": 3216.032633411062
+       },
+       "27": {
+        "coverage": 0.8884758364312267,
+        "width": 3782.0271327894857
+       },
+       "28": {
+        "coverage": 0.9256505576208178,
+        "width": 4334.099700385482
+       },
+       "29": {
+        "coverage": 0.9107806691449815,
+        "width": 4253.415585787296
+       },
+       "30": {
+        "coverage": 0.8996282527881041,
+        "width": 4221.378847220387
+       },
+       "31": {
+        "coverage": 0.9033457249070632,
+        "width": 3561.024756854837
+       },
+       "32": {
+        "coverage": 0.9107806691449815,
+        "width": 3316.077080580611
+       },
+       "33": {
+        "coverage": 0.7843866171003717,
+        "width": 2197.894832148747
+       },
+       "34": {
+        "coverage": 0.5055762081784386,
+        "width": 957.1465777520882
+       },
+       "35": {
+        "coverage": 0.46120689655172414,
+        "width": 533.3772275626872
+       },
+       "36": {
+        "coverage": 0.3609467455621302,
+        "width": 142.19736554362137
+       },
+       "37": {
+        "coverage": 0.0,
+        "width": 0.0
+       }
+      },
+      "hours": 3883
+     },
+     "0.95": {
+      "coverage": 0.7710533092969354,
+      "mean_width": 4760.061737252929,
+      "by_fold": {
+       "V2": 0.6579861111111112,
+       "V3": 0.8036175710594315,
+       "V4": 0.8385460693153001
+      },
+      "by_lead": {
+       "21": {
+        "coverage": 0.0,
+        "width": NaN
+       },
+       "22": {
+        "coverage": 0.006944444444444444,
+        "width": 1.4205720498375702
+       },
+       "23": {
+        "coverage": 0.6095238095238096,
+        "width": 864.8293895607795
+       },
+       "24": {
+        "coverage": 0.7325581395348837,
+        "width": 2129.4783718131694
+       },
+       "25": {
+        "coverage": 0.9070631970260223,
+        "width": 3811.617707613004
+       },
+       "26": {
+        "coverage": 0.9851301115241635,
+        "width": 5528.395693551328
+       },
+       "27": {
+        "coverage": 0.9851301115241635,
+        "width": 6739.980301183359
+       },
+       "28": {
+        "coverage": 0.9851301115241635,
+        "width": 6988.178315919337
+       },
+       "29": {
+        "coverage": 0.9925650557620818,
+        "width": 7657.754185455401
+       },
+       "30": {
+        "coverage": 0.9925650557620818,
+        "width": 7692.7183646407175
+       },
+       "31": {
+        "coverage": 0.9925650557620818,
+        "width": 6905.392082237924
+       },
+       "32": {
+        "coverage": 0.9925650557620818,
+        "width": 5584.94151209806
+       },
+       "33": {
+        "coverage": 0.8513011152416357,
+        "width": 3312.187586298557
+       },
+       "34": {
+        "coverage": 0.5613382899628253,
+        "width": 1966.073197674524
+       },
+       "35": {
+        "coverage": 0.521551724137931,
+        "width": 787.533049460993
+       },
+       "36": {
+        "coverage": 0.40236686390532544,
+        "width": 201.26304939951376
+       },
+       "37": {
+        "coverage": 0.0,
+        "width": 0.0
+       }
+      },
+      "hours": 3883
+     },
+     "usable": false
+    },
+    "prediction scaled, pooled": {
+     "0.8": {
+      "coverage": 0.8431625032191604,
+      "mean_width": 3319.2877640078354,
+      "by_fold": {
+       "V2": 0.8862847222222222,
+       "V3": 0.8901808785529716,
+       "V4": 0.7396449704142012
+      },
+      "by_lead": {
+       "21": {
+        "coverage": 0.013157894736842105,
+        "width": 0.0
+       },
+       "22": {
+        "coverage": 0.6319444444444444,
+        "width": 182.2663262607956
+       },
+       "23": {
+        "coverage": 0.7619047619047619,
+        "width": 668.5305499049333
+       },
+       "24": {
+        "coverage": 0.8294573643410853,
+        "width": 1466.7354994246043
+       },
+       "25": {
+        "coverage": 0.9107806691449815,
+        "width": 2809.6344709571467
+       },
+       "26": {
+        "coverage": 0.9033457249070632,
+        "width": 4251.551673818716
+       },
+       "27": {
+        "coverage": 0.929368029739777,
+        "width": 5215.649954197658
+       },
+       "28": {
+        "coverage": 0.9553903345724907,
+        "width": 5687.92977024529
+       },
+       "29": {
+        "coverage": 0.9591078066914498,
+        "width": 5782.991064759765
+       },
+       "30": {
+        "coverage": 0.9442379182156134,
+        "width": 5708.620122294818
+       },
+       "31": {
+        "coverage": 0.9368029739776952,
+        "width": 5374.768946962315
+       },
+       "32": {
+        "coverage": 0.9368029739776952,
+        "width": 4639.078874798776
+       },
+       "33": {
+        "coverage": 0.9144981412639405,
+        "width": 3384.9846815173723
+       },
+       "34": {
+        "coverage": 0.828996282527881,
+        "width": 1928.5425413983585
+       },
+       "35": {
+        "coverage": 0.7629310344827587,
+        "width": 978.897078501371
+       },
+       "36": {
+        "coverage": 0.6745562130177515,
+        "width": 383.98119488005784
+       },
+       "37": {
+        "coverage": 0.3557692307692308,
+        "width": 47.23656756374724
+       }
+      },
+      "hours": 3883
+     },
+     "0.95": {
+      "coverage": 0.9013649240278135,
+      "mean_width": 5490.600130329046,
+      "by_fold": {
+       "V2": 0.9114583333333334,
+       "V3": 0.9127906976744186,
+       "V4": 0.8765849535080305
+      },
+      "by_lead": {
+       "21": {
+        "coverage": 0.013157894736842105,
+        "width": 0.0
+       },
+       "22": {
+        "coverage": 0.6666666666666666,
+        "width": 384.5307712432164
+       },
+       "23": {
+        "coverage": 0.8142857142857143,
+        "width": 1387.2372584228613
+       },
+       "24": {
+        "coverage": 0.8914728682170543,
+        "width": 2995.1659846184043
+       },
+       "25": {
+        "coverage": 0.9851301115241635,
+        "width": 5418.18149937247
+       },
+       "26": {
+        "coverage": 1.0,
+        "width": 7248.026490007629
+       },
+       "27": {
+        "coverage": 1.0,
+        "width": 8181.534626282855
+       },
+       "28": {
+        "coverage": 1.0,
+        "width": 8620.12638111137
+       },
+       "29": {
+        "coverage": 0.9962825278810409,
+        "width": 8722.692014694172
+       },
+       "30": {
+        "coverage": 0.9925650557620818,
+        "width": 8614.009740054293
+       },
+       "31": {
+        "coverage": 0.9962825278810409,
+        "width": 8274.658391914409
+       },
+       "32": {
+        "coverage": 0.9888475836431226,
+        "width": 7602.832642804335
+       },
+       "33": {
+        "coverage": 0.9888475836431226,
+        "width": 6281.9895943962265
+       },
+       "34": {
+        "coverage": 0.9033457249070632,
+        "width": 3859.5152394084494
+       },
+       "35": {
+        "coverage": 0.8232758620689655,
+        "width": 2000.1545540000766
+       },
+       "36": {
+        "coverage": 0.7218934911242604,
+        "width": 808.2013572001581
+       },
+       "37": {
+        "coverage": 0.375,
+        "width": 99.94153866386348
+       }
+      },
+      "hours": 3883
+     },
+     "usable": false
+    }
+   },
+   "frozen": null
+  }
+ }
+}
