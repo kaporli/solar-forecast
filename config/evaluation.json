@@ -1,0 +1,98 @@
+{
+ "frozen": "2026-11-04",
+ "note": "Frozen before any learned-model comparison. Changing a value requires a new dated version and a reason recorded in docs/evaluation-protocol.md.",
+ "experiments": {
+  "belgium": {
+   "primary_kind": "11h",
+   "first_validation_rule": "first target day whose weather run (00 UTC or 06 UTC of D-1) is initialised on or after 2024-11-12 00Z, when 49r1 became operational",
+   "unit": "MWh",
+   "daylight_points": "unweighted mean of the 11 province points",
+   "validation_folds": [
+    {"name": "V1", "start": "2024-11-13", "end": "2025-01-31"},
+    {"name": "V2", "start": "2025-02-01", "end": "2025-04-30"},
+    {"name": "V3", "start": "2025-05-01", "end": "2025-07-31"},
+    {"name": "V4", "start": "2025-08-01", "end": "2025-10-31"}
+   ],
+   "test": {"start": "2025-11-01", "end": "2026-10-31"},
+   "test_slices": ["before 2026-10-26 (ods032)", "from 2026-10-26 (ods209)"]
+  },
+  "pvdaq": {
+   "primary_kind": "09h",
+   "first_validation_rule": "first target day whose weather run (00 UTC of the issuance day D-1) is initialised on or after 2024-11-12 00Z",
+   "unit": "kWh",
+   "daylight_points": "site",
+   "validation_folds": [
+    {"name": "V1", "start": "2024-11-13", "end": "2025-01-31"},
+    {"name": "V2", "start": "2025-02-01", "end": "2025-04-30"},
+    {"name": "V3", "start": "2025-05-01", "end": "2025-06-30"}
+   ],
+   "test": {"start": "2025-07-01", "end": "2025-12-31"},
+   "test_slices": []
+  }
+ },
+ "training": {
+  "first_target": "2024-03-15",
+  "label_lag_days": 2,
+  "rule": "a model for a fold is fitted once, before the fold's first issuance, on target days <= fold start - label_lag_days; expanding window; no refit inside a fold"
+ },
+ "scoring": {
+  "scored_hour": "target eligible (observed, no exclusion) and weather_complete and capacity_complete and persistence available",
+  "daylight": "sun's upper limb above the horizon (apparent elevation > -0.833 deg) at the start or end of the hour",
+  "complete_day": "every hour of the local day scored and the target day_complete",
+  "postprocessing": "every candidate's prediction is clipped to [0, capacity x 1 h]; the Elia benchmark is scored as published",
+  "primary_metric": "daylight hourly MAE on the primary kind, pooled over validation folds",
+  "secondary_metrics": ["all-hours MAE", "daylight and all-hours RMSE", "daily-total MAE over complete days", "signed bias (prediction minus actual)", "daylight MAE by lead hour"],
+  "slices": {
+   "season": "DJF, MAM, JJA, SON by target month",
+   "sky": "daylight mean of the forecast cloud_cover per target day: clear < 30 %, mixed 30 to 70 %, overcast > 70 %",
+   "min_days": 14
+  }
+ },
+ "resampling": {
+  "method": "paired moving-block bootstrap over target days, circular",
+  "statistic": "difference in daylight MAE, candidate minus reference, on identical scored hours",
+  "block_days": 14,
+  "resamples": 2000,
+  "seed": 0,
+  "interval": 0.95
+ },
+ "selection": {
+  "improvement_threshold": 0.05,
+  "rule": "a learned candidate replaces the best baseline only if its pooled validation daylight MAE is at least 5 % lower, the upper bound of the 95 % paired-bootstrap interval of the difference is below zero, and it is better in at least all but one validation fold",
+  "simpler_preferred_within": 0.02,
+  "simpler_rule": "among candidates within 2 % of the best pooled daylight MAE, choose the one with fewer inputs, then lower inference cost"
+ },
+ "resources": {
+  "inference_per_issuance_seconds": 5,
+  "inference_peak_memory_mb": 512,
+  "model_artifact_mb": 50,
+  "training_wall_clock_minutes": 60,
+  "where": "inference on the always-on deployment host (measured in #6), training on a development machine"
+ },
+ "physics": {
+  "belgium": {
+   "tilt_deg": 35,
+   "azimuth_deg": 180,
+   "transposition": "haydavies",
+   "albedo": 0.2,
+   "cell_temperature": "sapm close_mount_glass_glass",
+   "gamma_pdc_per_c": -0.004,
+   "performance_ratio": 0.8,
+   "basis": "assumed fleet geometry and ratio, not fitted; the Belgian fleet orientation and losses are unknown"
+  },
+  "pvdaq": {
+   "tilt_deg": 25,
+   "azimuth_deg": 180,
+   "transposition": "haydavies",
+   "albedo": 0.2,
+   "cell_temperature": "sapm open_rack_glass_polymer",
+   "gamma_pdc_per_c": -0.004,
+   "dc_kw": 892.8,
+   "dc_losses_percent": "pvlib pvwatts_losses defaults (14.08 %)",
+   "inverter_eta_nominal": 0.96,
+   "ac_limit_kw": 720.0,
+   "ac_limit_basis": "24 x 30 kW maximum output power of the ABB TRIO-27.6-TL-OUTD (US datasheet 9AKK106103A4856); the meter peak 707.84 kW is below it. Effective export limit unknown",
+   "basis": "documented installation geometry and capacity; temperature coefficient, losses and inverter efficiency are assumptions, not fitted"
+  }
+ }
+}

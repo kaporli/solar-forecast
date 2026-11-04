@@ -2,6 +2,7 @@
 
     uv run solar-data fetch belgium|pvdaq
     uv run solar-data build belgium|pvdaq [--inputs data/datasets/<experiment>-v1.json]
+    uv run solar-data evaluate belgium|pvdaq
     uv run solar-data contract
 """
 from __future__ import annotations
@@ -227,7 +228,7 @@ def report(exp: F.Experiment, inputs, t: pd.DataFrame, feats: pd.DataFrame, mani
 def main(argv=None) -> None:
     p = argparse.ArgumentParser(prog="solar-data")
     sub = p.add_subparsers(dest="cmd", required=True)
-    for c in ("fetch", "build"):
+    for c in ("fetch", "build", "evaluate"):
         s = sub.add_parser(c)
         s.add_argument("experiment", choices=["belgium", "pvdaq"])
         if c == "fetch":
@@ -240,6 +241,9 @@ def main(argv=None) -> None:
         fetch(a.experiment, a.weather_only)
     elif a.cmd == "build":
         build(a.experiment, a.inputs)
+    elif a.cmd == "evaluate":
+        from .baseline_report import run
+        run(a.experiment)
     else:
         sys.stdout.write(F.contract_markdown())
 

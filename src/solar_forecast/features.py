@@ -220,17 +220,30 @@ def _persistence_lookup(inputs, as_of) -> dict:
     return out
 
 
-def features_for_issuance(exp: Experiment, inputs, target_date, kind: str, live: bool = False) -> pd.DataFrame:
+@dataclass(frozen=True)
+class IssuanceInputs:
+    issuance: pd.Timestamp
+    as_of: pd.Timestamp | None  # snapshots retrieved after this are invisible; None = every snapshot (replay)
+    cutoff: pd.Timestamp
+    capacity: float
+    capacity_complete: bool
+    weights: pd.Series | None  # per point, sums to 1; None unless capacity_complete
+    run: pd.Timestamp | None
+    weather: pd.DataFrame | None  # parsed run snapshot, long format
+    retrieved_at: pd.Timestamp | None
+    availability: str
+
+
+def issuance_inputs(exp: Experiment, inputs, target_date, kind: str, live: bool = False) -> IssuanceInputs:
+    """The inputs one issuance may use: capacity and per-point weights at the cutoff, and the weather snapshot
+    (rule run, or live the latest earlier run). Features and every baseline that reads snapshots use this."""
     issuance = issuance_time(exp, target_date, kind)
     as_of = issuance if live else None
-    hours = day_hours(target_date, exp.tz)
     cutoff = exp.cutoff(issuance)
     capacity, per_point = inputs.capacity(as_of, cutoff)
     capacity_complete = bool(np.isfinite(capacity) and capacity > 0 and len(per_point) == len(exp.points)
                              and np.isfinite(per_point).all() and (per_point > 0).all())
     weights = per_point / per_point.sum() if capacity_complete else None
-    target_day = pd.Timestamp(target_date).date()
-
     run = rule_run(exp, issuance, kind)
     got = inputs.weather.get(run, as_of)
     availability = "missing"
@@ -240,6 +253,18 @@ def features_for_issuance(exp: Experiment, inputs, target_date, kind: str, live:
         fb = inputs.weather.latest_before(run, as_of)
         if fb:
             run, got, availability = fb[0], fb[1], "fallback"
+    return IssuanceInputs(issuance, as_of, cutoff, capacity, capacity_complete, weights,
+                          run if got else None, got[0] if got else None, got[1] if got else None, availability)
+
+
+def features_for_issuance(exp: Experiment, inputs, target_date, kind: str, live: bool = False) -> pd.DataFrame:
+    ctx = issuance_inputs(exp, inputs, target_date, kind, live)
+    issuance, as_of, cutoff, capacity = ctx.issuance, ctx.as_of, ctx.cutoff, ctx.capacity
+    capacity_complete, weights, availability = ctx.capacity_complete, ctx.weights, ctx.availability
+    got = (ctx.weather, ctx.retrieved_at) if ctx.weather is not None else None
+    run = ctx.run
+    hours = day_hours(target_date, exp.tz)
+    target_day = pd.Timestamp(target_date).date()
     wx = pd.DataFrame(np.nan, index=hours, columns=WEATHER)
     if got and capacity_complete:
         pw = hour_weather(got[0], hours)
