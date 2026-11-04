@@ -2,8 +2,8 @@
  "experiment": "pvdaq",
  "feature_version": "v1",
  "label": "revenue meter, AC",
- "built_at": "2026-11-04T08:18:18.309516+00:00",
- "code_commit": "88de9677392383b828410b22631f7fcc15804123",
+ "built_at": "2026-11-04T09:27:13.170079+00:00",
+ "code_commit": "40eed8411a4de7521e70f62931ab8e36aaf93ff7",
  "code_dirty": false,
  "command": "uv run solar-data build pvdaq --inputs data/datasets/pvdaq-v1.json",
  "window": {

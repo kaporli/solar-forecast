@@ -2,8 +2,8 @@
  "experiment": "belgium",
  "feature_version": "v1",
  "label": "measured and upscaled",
- "built_at": "2026-11-04T08:18:06.463184+00:00",
- "code_commit": "88de9677392383b828410b22631f7fcc15804123",
+ "built_at": "2026-11-04T09:27:00.124808+00:00",
+ "code_commit": "40eed8411a4de7521e70f62931ab8e36aaf93ff7",
  "code_dirty": false,
  "command": "uv run solar-data build belgium --inputs data/datasets/belgium-v1.json",
  "window": {
@@ -17,7 +17,7 @@
   },
   "data/build/belgium-v1/features.parquet": {
    "rows": 42529,
-   "content_sha256": "7a8aed9454d1b86f621851134e097004ded5da713a2fc6039b4a04612c62fa7f"
+   "content_sha256": "cb7052bff79aad18e830051334e1499aa99d30c3725ab9ee3ff9b3b8e5818f88"
   }
  },
  "inputs": [
@@ -12396,6 +12396,76 @@
    "file": "data/raw/snapshots/weather-belgium/20251122T00_20261104T074204.496284Z_29ffbce752974ac1bbd4cbf6f303a03b.json",
    "sha256": "e345432e65a6a39595197f74eb46b7275ad929882bc9dcf57bd645e47f6baa58",
    "retrieved_at": "2026-11-04T07:42:04.496284+00:00"
+  },
+  {
+   "source": "weather-belgium",
+   "name": "20251122T06",
+   "file": "data/raw/snapshots/weather-belgium/20251122T06_20261104T092509.833804Z_7c28c5d61ee64ea5807e62b32522471d.json",
+   "sha256": "ed4684c5bb21567a39c31063b9c73ad984c8c22963c3700bb682aa5df38622dd",
+   "retrieved_at": "2026-11-04T09:25:09.833804+00:00"
+  },
+  {
+   "source": "weather-belgium",
+   "name": "20251123T00",
+   "file": "data/raw/snapshots/weather-belgium/20251123T00_20261104T092510.241969Z_80d64dde458a453a9a34b4035d24b70e.json",
+   "sha256": "6399c288beb24e29da9a145be630aa011a2a0c891248b224b276a8e555e36a61",
+   "retrieved_at": "2026-11-04T09:25:10.241969+00:00"
+  },
+  {
+   "source": "weather-belgium",
+   "name": "20251123T06",
+   "file": "data/raw/snapshots/weather-belgium/20251123T06_20261104T092512.025570Z_c248c4247d3644ecb0b640732f0da4f2.json",
+   "sha256": "dccedb2aef1bc70cd9a6155b7a97ac6121e5b8df9d0ab6e16b44209cdef4cd21",
+   "retrieved_at": "2026-11-04T09:25:12.025570+00:00"
+  },
+  {
+   "source": "weather-belgium",
+   "name": "20251124T00",
+   "file": "data/raw/snapshots/weather-belgium/20251124T00_20261104T092512.376545Z_f855ca8de2f8493c98d9b6c553c131f1.json",
+   "sha256": "a5b7fbd0dcbf48516ca875a2c137ba680f818bd50c8177d8c7ac730572b9ddf7",
+   "retrieved_at": "2026-11-04T09:25:12.376545+00:00"
+  },
+  {
+   "source": "weather-belgium",
+   "name": "20251124T06",
+   "file": "data/raw/snapshots/weather-belgium/20251124T06_20261104T092514.488198Z_745860834321427e8530c4c8f1803de7.json",
+   "sha256": "8d62d065c6ff740a2a85ab4222c6ed1ddbb50f1c311a5c2f2726b80a13618f84",
+   "retrieved_at": "2026-11-04T09:25:14.488198+00:00"
+  },
+  {
+   "source": "weather-belgium",
+   "name": "20251125T00",
+   "file": "data/raw/snapshots/weather-belgium/20251125T00_20261104T092515.550236Z_99bc8714843c40f58376cd45165a134c.json",
+   "sha256": "f231b56f574e5e8da7636c4ee51136bfcc76f383524ec8d7467b5edb4e995fac",
+   "retrieved_at": "2026-11-04T09:25:15.550236+00:00"
+  },
+  {
+   "source": "weather-belgium",
+   "name": "20251125T06",
+   "file": "data/raw/snapshots/weather-belgium/20251125T06_20261104T092517.647740Z_2dd8ebaf05da44daa6b6a1fb87c68b7e.json",
+   "sha256": "63fa0d7e049df4a3ce0e9ad7d3e942f33470edf93c69b32df5552b25a3f2a159",
+   "retrieved_at": "2026-11-04T09:25:17.647740+00:00"
+  },
+  {
+   "source": "weather-belgium",
+   "name": "20251126T00",
+   "file": "data/raw/snapshots/weather-belgium/20251126T00_20261104T092518.404532Z_ca17b08e79d04ad39d27a605b9445465.json",
+   "sha256": "e564fa5430cc01f5ee40f0b060dffbc3ccd167780a3447bf5f7bbbce8a9be8c6",
+   "retrieved_at": "2026-11-04T09:25:18.404532+00:00"
+  },
+  {
+   "source": "weather-belgium",
+   "name": "20251126T06",
+   "file": "data/raw/snapshots/weather-belgium/20251126T06_20261104T092520.243580Z_05f99fe04ca34237a39d39a8fad10947.json",
+   "sha256": "90886ca51fc78088f9c8f60cdea58870567aa6f3d71982d6207c103f533202cf",
+   "retrieved_at": "2026-11-04T09:25:20.243580+00:00"
+  },
+  {
+   "source": "weather-belgium",
+   "name": "20261104T00",
+   "file": "data/raw/snapshots/weather-belgium/20261104T00_20261104T092520.389010Z_82973399f9534ab89e4393015f94330c.json",
+   "sha256": "944af9078107f925f8b9d3074c961ae06e3e1f7fc1a7ee12f09fe0462eb29e17",
+   "retrieved_at": "2026-11-04T09:25:20.389010+00:00"
   }
  ]
 }
