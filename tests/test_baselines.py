@@ -50,14 +50,24 @@ def test_persistence_scales_load_factor_by_capacity():
     assert p[0] == 4000.0 and np.isnan(p[1])
 
 
-def test_belgium_physics_uses_the_feature_run_and_weights(store):
+def test_belgium_physics_uses_the_feature_rows_inputs(store):
+    from conftest import elia_csv
     from test_features import TARGET, base, inputs
 
     base(store)
     i = inputs(store.path)
-    rows = F.features_for_issuance(F.belgium(), i, TARGET, "11h")
-    pred = B.BelgiumPhysics(i).predict(rows)
+    rows = F.features_for_issuance(F.belgium(), i, TARGET, "11h", live=True)
+    before = B.BelgiumPhysics(i, live=True).predict(rows)
     night = rows["cos_zenith"].to_numpy() == 0
-    assert np.isfinite(pred).all() and (pred[~night] > 0).any() and (pred <= rows["capacity"].to_numpy()).all()
-    gone = rows.assign(weather_run_utc=pd.NaT)  # no run: no prediction, never zero
-    assert np.isnan(B.BelgiumPhysics(i).predict(gone)).all()
+    assert np.isfinite(before).all() and (before[~night] > 0).any() and (before <= rows["capacity"].to_numpy()).all()
+    # a capacity revision retrieved after the issuance: live features and live physics must not change
+    store("elia", "ods032_belgium", "csv", elia_csv("2024-03-05", "2024-03-17 09:30", capacity=2000.0),
+          "2024-03-17 12:00Z", dataset="ods032")
+    j = inputs(store.path)
+    live = F.features_for_issuance(F.belgium(), j, TARGET, "11h", live=True)
+    pd.testing.assert_frame_equal(live, rows)
+    np.testing.assert_allclose(B.BelgiumPhysics(j, live=True).predict(live), before)
+    with pytest.raises(ValueError, match="other snapshots"):  # live rows, retrospective inputs
+        B.BelgiumPhysics(j, live=False).predict(live)
+    replay = F.features_for_issuance(F.belgium(), j, TARGET, "11h")
+    np.testing.assert_allclose(B.BelgiumPhysics(j).predict(replay), 2 * before)  # replay sees the revision

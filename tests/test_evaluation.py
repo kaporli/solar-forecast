@@ -21,7 +21,7 @@ def _ex(days=("2024-11-08", "2024-11-09", "2024-11-10", "2024-11-11", "2024-11-1
                 "persistence_lf": 0.1, "weather_complete": True, "capacity_complete": True,
                 "weather_run_utc": pd.Timestamp(d, tz="UTC") - pd.Timedelta(days=1),
                 "actual": 10.0, "eligible": True, "day_complete": True, "scored": True, "daylight": True,
-                "complete_day": True})
+                "day_hours": 2})
     return pd.DataFrame(rows)
 
 
@@ -35,8 +35,30 @@ def test_metrics_on_a_fixture():
     assert m["rmse_daylight"] == pytest.approx(np.sqrt((4 + 0 + 16) / 3))
     assert m["bias_daylight"] == pytest.approx((2 + 0 + 4) / 3)
     assert m["daily_mae"] == pytest.approx((1 + 4) / 2) and m["daily_bias"] == pytest.approx((-1 + 4) / 2)
-    r.loc[0, "scored"] = False  # unscored hours never count
-    assert E.metrics(r)["hours"] == 3
+    r.loc[0, "scored"] = False  # unscored hours never count, and their day is no longer complete
+    m = E.metrics(r)
+    assert m["hours"] == 3 and m["complete_days"] == 1
+
+
+def test_missing_predictions_fail_instead_of_dropping_hours():
+    r = _ex(("2025-01-01",)).assign(prediction=[10.0, np.nan])
+    with pytest.raises(ValueError, match="non-finite"):
+        E.metrics(r)
+
+    class Gaps(Recorder):
+        def predict(self, rows):
+            return np.where(np.arange(len(rows)) % 2, np.nan, 10.0)
+
+    with pytest.raises(ValueError, match="non-finite predictions on scored hours"):
+        E.backtest(Gaps(), _ex(), [E.Fold("V", D("2024-11-13"), D("2024-11-14"))])
+
+
+def test_daily_totals_need_every_hour_of_the_local_day():
+    r = _ex(("2025-01-01", "2025-01-02")).assign(prediction=10.0)
+    assert E.metrics(r)["complete_days"] == 2
+    assert E.metrics(r.drop(index=0))["complete_days"] == 1  # a subset without one hour drops that day
+    r["day_hours"] = 3  # e.g. a 25-hour fall-back day with only 24 rows present
+    assert E.metrics(r)["complete_days"] == 0
 
 
 def test_folds_are_ordered_disjoint_and_test_last():
@@ -82,3 +104,6 @@ def test_block_bootstrap_is_paired_and_deterministic():
     b = ex.assign(prediction=ex["actual"] + np.where(np.arange(len(ex)) % 2, 3.0, 1.0))
     r1, r2 = E.block_bootstrap(a, b), E.block_bootstrap(a, b)
     assert r1 == r2 and r1["difference"] == pytest.approx(-1.0) and r1["high"] < 0 and r1["days"] == 40
+    gap = ~ex["target_date"].between(D("2025-01-10"), D("2025-01-13"))  # days without scored hours
+    r3 = E.block_bootstrap(a[gap], b[gap])
+    assert r3["calendar_days"] == 40 and r3["days"] == 36  # blocks run over calendar days, gap included

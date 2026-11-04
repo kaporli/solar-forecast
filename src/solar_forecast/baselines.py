@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 import pvlib
 
+from . import features as F
 from . import sources
 from .weather import HOUR, hour_weather
 
@@ -84,30 +85,36 @@ class PvdaqPhysics:
 
 class BelgiumPhysics:
     """Aggregate reference: per province, PVWatts DC per kW for an assumed fleet geometry times a fixed performance
-    ratio; national = monitored capacity x capacity-weighted mean over provinces. Uses the same weather run and the
-    same capacity weights at the cutoff as the feature row, read from the snapshots in `inputs`."""
+    ratio; national = monitored capacity x capacity-weighted mean over provinces.
+
+    Inputs come from `features.issuance_inputs` with the same `live` flag as the feature rows, so the weather
+    snapshot, capacity and weights are the ones the features were built from. A row whose run, snapshot retrieval
+    or capacity differs raises: it was built under other availability."""
 
     name = "physics"
 
-    def __init__(self, inputs, p: dict | None = None):
-        self.inputs, self.p = inputs, p or CONFIG["physics"]["belgium"]
+    def __init__(self, inputs, p: dict | None = None, live: bool = False):
+        self.inputs, self.p, self.live = inputs, p or CONFIG["physics"]["belgium"], live
 
     def fit(self, train) -> None:
         pass
 
     def predict(self, rows: pd.DataFrame) -> np.ndarray:
-        points = self.inputs.exp.points
+        exp = self.inputs.exp
         parts = []
-        for (issuance, run, cutoff), g in rows.groupby(["issuance_utc", "weather_run_utc", "actuals_cutoff_utc"],
-                                                       sort=False, dropna=False):
-            national, per_point = self.inputs.capacity(None, cutoff)
-            got = None if pd.isna(run) else self.inputs.weather.get(run, None)
-            if got is None or not np.isfinite(per_point).all() or per_point.sum() <= 0:
+        for (target_date, kind), g in rows.groupby(["target_date", "kind"], sort=False):
+            ctx = F.issuance_inputs(exp, self.inputs, target_date, kind, self.live)
+            first = g.iloc[0]
+            same = (_same(ctx.run, first["weather_run_utc"]) and _same(ctx.retrieved_at, first["weather_retrieved_at"])
+                    and _same(ctx.capacity, first["capacity"]))
+            if not same:
+                raise ValueError(f"{target_date} {kind}: feature row built from other snapshots than live={self.live}")
+            if ctx.weather is None or not ctx.capacity_complete:
                 continue
             hours = pd.DatetimeIndex(g["target_hour_utc"])
-            w = hour_weather(got[0], hours).reset_index()
-            w["weight"] = w["point"].map(per_point / per_point.sum())
-            w["national"] = national
+            w = hour_weather(ctx.weather, hours).reset_index()
+            w["weight"] = w["point"].map(ctx.weights)
+            w["national"] = ctx.capacity
             w["row"] = w["hour_utc"].map(pd.Series(g.index, index=hours))
             parts.append(w)
         out = pd.Series(np.nan, index=rows.index)
@@ -116,13 +123,23 @@ class BelgiumPhysics:
         w = pd.concat(parts, ignore_index=True)
         w["dc"] = np.nan
         for point, g in w.groupby("point"):
-            lat, lon = points[point]
+            lat, lon = exp.points[point]
             w.loc[g.index, "dc"] = dc_per_kw(g["hour_utc"], lat, lon, g["shortwave_radiation"],
                                              g["direct_normal_irradiance"], g["diffuse_radiation"],
                                              g["temperature_2m"], g["wind_speed_10m"], self.p)
         w["part"] = w["dc"] * self.p["performance_ratio"] * w["weight"] * w["national"]
-        out.loc[:] = w.groupby("row")["part"].sum(min_count=len(points)).reindex(rows.index).to_numpy()
+        out.loc[:] = w.groupby("row")["part"].sum(min_count=len(exp.points)).reindex(rows.index).to_numpy()
         return out.to_numpy()
+
+
+def _same(a, b) -> bool:
+    if a is None or pd.isna(a):
+        return b is None or pd.isna(b)
+    if b is None or pd.isna(b):
+        return False
+    if isinstance(a, float):
+        return bool(np.isclose(a, float(b)))
+    return pd.Timestamp(a) == pd.Timestamp(b)
 
 
 def candidates(exp_name: str, inputs) -> list:

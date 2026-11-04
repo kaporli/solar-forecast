@@ -53,13 +53,18 @@ Changing a value requires a new dated version of this file and a reason. Validat
 ## Comparing candidates
 
 - Paired moving-block bootstrap over target days of the daylight MAE difference on identical hours: circular
-  14-day blocks, 2,000 resamples, seed 0, 95 % percentile interval.
+  blocks of 14 consecutive calendar days, 2,000 resamples, seed 0, 95 % percentile interval. A day without
+  scored hours (Belgium: 2025-08-07 to 2025-08-10) keeps its place in the calendar and contributes nothing.
+- Every candidate must return a finite prediction for every scored hour; a missing one fails the evaluation
+  instead of dropping the hour. A comparison subset (the Elia benchmark) counts a day in daily totals only if
+  every hour of that local day (23, 24 or 25) is in the subset.
 - Block length: forecast errors follow weather regimes lasting several days, and the error of an uncalibrated
   model also drifts with the season. For physics minus persistence in validation (primary kind), the
-  autocorrelation of the daily difference at lags 1, 3, 5, 7, 10, 14 and 21 days is 0.23, 0.22, 0.18, 0.10, 0.12,
-  0.07 and 0.08 for Belgium, and 0.29, 0.08, 0.08, 0.08, 0.06, -0.06 and 0.07 for PVDAQ. 14 days is the shortest
-  block after which Belgium stays under 0.1. The Belgian interval depends on it: -264 to -51 MWh with 7-day
-  blocks, -283 to -22 with 14, -286 to +2 with 21; PVDAQ barely moves (-38 to -14, -40 to -12, -41 to -11 kWh).
+  autocorrelation of the daily difference at lags 1, 3, 5, 7, 10, 14 and 21 calendar days is 0.23, 0.22, 0.18,
+  0.11, 0.12, 0.07 and 0.08 for Belgium, and 0.29, 0.08, 0.08, 0.08, 0.06, -0.06 and 0.07 for PVDAQ. 14 days is
+  the shortest block after which Belgium stays under 0.1. The Belgian interval depends on it: -260 to -55 MWh
+  with 7-day blocks, -276 to -25 with 14, -282 to -3 with 21; PVDAQ barely moves (-38 to -14, -40 to -12,
+  -41 to -11 kWh).
   Each report lists the autocorrelation at lags 1 to 14 so the choice can be rechecked for every comparison.
 - Selection rule for #5: a learned candidate replaces the best baseline only if its pooled validation daylight
   MAE is at least 5 % lower, the upper bound of the 95 % interval of the difference is below zero, and it is
@@ -81,8 +86,9 @@ Changing a value requires a new dated version of this file and a reason. Validat
   unknown). Hour energy is the mean AC power over the hour times 1 h.
 - Belgian physics (aggregate reference): per province, the same chain for an assumed fleet geometry (tilt 35 deg,
   south), SAPM close-mount cell temperature, -0.4 %/degC and a fixed performance ratio of 0.80; national
-  prediction = monitored capacity x capacity-weighted mean over provinces, with the weather run and weights of the
-  feature row.
+  prediction = monitored capacity x capacity-weighted mean over provinces. Its inputs come from the same selection
+  as the features (`features.issuance_inputs`, same `live` flag): live, a snapshot retrieved after the issuance
+  is invisible to both; a row whose run, snapshot retrieval or capacity differs from that selection is refused.
 - Nothing in either physics baseline is fitted. Its bias in validation (Belgium: about +500 MWh per daylight hour)
   is recorded rather than corrected; calibration is part of the learned comparison in #5.
 - The original random-split MAE of 0.066 is not comparable with these scores and is not used as a reference.

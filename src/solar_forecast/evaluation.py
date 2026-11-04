@@ -67,7 +67,8 @@ def daylight(hours: pd.DatetimeIndex, exp: F.Experiment) -> np.ndarray:
 
 
 def scored_examples(exp: F.Experiment, feats: pd.DataFrame, targets: pd.DataFrame) -> pd.DataFrame:
-    """Every feature row with its target (`actual`), `scored`, `daylight` and `complete_day`."""
+    """Every feature row with its target (`actual`), `scored`, `daylight` and `day_hours` (hours of the local
+    target day: 23, 24 or 25; features carry one row per hour)."""
     ex = F.examples(feats, targets[["hour_utc", "local_date", "local_hour", exp.target_col, "eligible",
                                     "day_complete"] + [c for c in ("elia_da11_mwh", "elia_da18_mwh") if c in targets]])
     ex = ex.rename(columns={exp.target_col: "actual"})
@@ -76,8 +77,7 @@ def scored_examples(exp: F.Experiment, feats: pd.DataFrame, targets: pd.DataFram
     ex["scored"] = ex["eligible"] & ex["weather_complete"] & ex["capacity_complete"] & ex["persistence_lf"].notna()
     hours = pd.DatetimeIndex(ex["target_hour_utc"].unique())
     ex["daylight"] = ex["target_hour_utc"].map(pd.Series(daylight(hours, exp), index=hours))
-    day = ex.groupby(["kind", "target_date"])["scored"].transform("all") & ex["day_complete"]
-    ex["complete_day"] = day
+    ex["day_hours"] = ex.groupby(["kind", "target_date"])["target_hour_utc"].transform("size")
     return ex
 
 
@@ -101,17 +101,26 @@ def backtest(candidate, ex: pd.DataFrame, fs: list[Fold], cfg: dict = CONFIG, un
         candidate.fit(train)
         rows = ex[(ex["target_date"] >= fold.start) & (ex["target_date"] <= fold.end)]
         pred = np.asarray(candidate.predict(rows[list(F.CONTRACT)]), float)
+        bad = rows["scored"].to_numpy(bool) & ~np.isfinite(pred)
+        if bad.any():  # a failed prediction must not drop a hard hour from the comparison
+            raise ValueError(f"{candidate.name}: {int(bad.sum())} non-finite predictions on scored hours in {fold.name}")
         pred = np.clip(pred, 0, rows["capacity"].to_numpy(float))
         out.append(rows.assign(fold=fold.name, candidate=candidate.name, prediction=pred))
     return pd.concat(out, ignore_index=True)
 
 
 def metrics(r: pd.DataFrame, pred: str = "prediction") -> dict:
-    """Scored rows only. Hourly metrics over all and daylight hours; daily totals over complete days."""
-    r = r[r["scored"] & r[pred].notna()]
+    """Over the scored rows given, each of which must have a finite prediction. Hourly metrics over all and
+    daylight hours; daily totals only over days with every hour of the local day present here (23, 24 or 25)
+    and the target `day_complete`, so a subset that drops hours also drops their days."""
+    r = r[r["scored"]]
+    if not np.isfinite(r[pred].to_numpy(float)).all():
+        raise ValueError("non-finite prediction on a scored hour")
     e = r[pred] - r["actual"]
     d = r["daylight"].to_numpy(bool)
-    days = r[r["complete_day"]].groupby(["kind", "target_date"])[[pred, "actual"]].sum()
+    g = r.groupby(["kind", "target_date"])
+    whole = (g.size() == g["day_hours"].first()) & g["day_complete"].all()
+    days = g[[pred, "actual"]].sum()[whole]
     de = days[pred] - days["actual"]
     nan = float("nan")
     return {
@@ -128,7 +137,8 @@ def metrics(r: pd.DataFrame, pred: str = "prediction") -> dict:
 
 def block_bootstrap(a: pd.DataFrame, b: pd.DataFrame, cfg: dict = CONFIG) -> dict:
     """Paired moving-block bootstrap over target days of daylight MAE(a) - MAE(b) on hours scored in both.
-    `a` and `b`: backtest rows of two candidates. Circular blocks of consecutive days in calendar order."""
+    `a` and `b`: backtest rows of two candidates. Circular blocks of consecutive calendar days: a day without
+    scored hours keeps its place and contributes nothing, so a block always spans `block_days` calendar days."""
     rs = cfg["resampling"]
     key = ["kind", "target_hour_utc"]
     m = a[a["scored"] & a["daylight"]].merge(b[key + ["prediction"]], on=key, suffixes=("_a", "_b")).dropna(
@@ -136,18 +146,21 @@ def block_bootstrap(a: pd.DataFrame, b: pd.DataFrame, cfg: dict = CONFIG) -> dic
     m["ea"] = (m["prediction_a"] - m["actual"]).abs()
     m["eb"] = (m["prediction_b"] - m["actual"]).abs()
     per = m.groupby("target_date").agg(ea=("ea", "sum"), eb=("eb", "sum"), n=("ea", "size")).sort_index()
-    ea, eb, n = per["ea"].to_numpy(), per["eb"].to_numpy(), per["n"].to_numpy()
+    cal = pd.date_range(per.index.min(), per.index.max(), freq="D").date
+    per = per.reindex(cal, fill_value=0)
+    ea, eb, n = per["ea"].to_numpy(float), per["eb"].to_numpy(float), per["n"].to_numpy()
     k, block = len(per), rs["block_days"]
     rng = np.random.default_rng(rs["seed"])
     stats = np.empty(rs["resamples"])
     for i in range(rs["resamples"]):
         starts = rng.integers(0, k, size=-(-k // block))
         idx = ((starts[:, None] + np.arange(block)) % k).ravel()[:k]
-        stats[i] = (ea[idx].sum() - eb[idx].sum()) / n[idx].sum()
+        stats[i] = (ea[idx].sum() - eb[idx].sum()) / n[idx].sum() if n[idx].sum() else np.nan
     alpha = (1 - rs["interval"]) / 2
-    daily = (ea - eb) / n
-    acf = [float(pd.Series(daily).autocorr(lag)) for lag in range(1, block + 1)] if k > block + 1 else []
-    return {"days": int(k), "hours": int(n.sum()), "difference": float((ea.sum() - eb.sum()) / n.sum()),
+    stats = stats[np.isfinite(stats)]
+    daily = pd.Series(np.where(n > 0, (ea - eb) / np.maximum(n, 1), np.nan))  # NaN keeps the calendar position
+    acf = [float(daily.autocorr(lag)) for lag in range(1, block + 1)] if k > block + 1 else []
+    return {"calendar_days": int(k), "days": int((n > 0).sum()), "hours": int(n.sum()), "difference": float((ea.sum() - eb.sum()) / n.sum()),
             "low": float(np.quantile(stats, alpha)), "high": float(np.quantile(stats, 1 - alpha)),
             "daily_difference_autocorrelation": acf}
 

@@ -142,8 +142,9 @@ def report(exp: F.Experiment, res: dict) -> str:
             L.append(f"| {c} | " + " | ".join(_f(byf[n]["mae_daylight"]) for n in names) + " |")
         b = k["physics_minus_persistence"]
         L += ["", f"Physics minus persistence, daylight MAE: {_f(b['difference'], 2)} {u} per hour, 95 % paired "
-              f"block-bootstrap interval {_f(b['low'], 2)} to {_f(b['high'], 2)} ({b['days']} days, {b['hours']} hours, "
-              f"{E.CONFIG['resampling']['block_days']}-day blocks). Autocorrelation of the daily difference at lags 1 "
+              f"block-bootstrap interval {_f(b['low'], 2)} to {_f(b['high'], 2)} ({b['days']} days with scored hours over "
+              f"{b['calendar_days']} calendar days, {b['hours']} hours, "
+              f"blocks of {E.CONFIG['resampling']['block_days']} calendar days). Autocorrelation of the daily difference at lags 1 "
               f"to {E.CONFIG['resampling']['block_days']}: "
               + ", ".join(_f(x, 2) for x in b["daily_difference_autocorrelation"]) + "."]
         if "elia_subset" in k:
