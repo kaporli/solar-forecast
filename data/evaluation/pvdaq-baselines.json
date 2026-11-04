@@ -1,0 +1,265 @@
+{
+ "experiment": "pvdaq",
+ "built_at": "2026-11-04T10:23:48.215785+00:00",
+ "code_commit": "2cb36e5abd24293f9446ba2ed9ac8c36f1746cb7",
+ "code_dirty": false,
+ "command": "uv run solar-data evaluate pvdaq",
+ "dataset_manifest": {
+  "file": "data/datasets/pvdaq-v1.json",
+  "sha256": "bd1b6bac1c08446385ecd20107aa1cc612de74b0aef080f0c8bf8626433a2ea2"
+ },
+ "protocol": {
+  "file": "config/evaluation.json",
+  "sha256": "b12ed98577f75321d7fd1ce855da15614e8b141c0568bbaa36c5bae5b7e215d3"
+ },
+ "splits": [
+  {
+   "fold": "V1",
+   "start": "2024-11-13",
+   "end": "2025-01-31",
+   "train_last_target": "2024-11-11",
+   "rows": 1920,
+   "scored_hours": 1920,
+   "rows_on_hindcast_runs": 0,
+   "scored_keys_sha256": "e2eb155a420b09f446a929bbb5463159daee6e0288f319dd98fa44e1c0cf7b81"
+  },
+  {
+   "fold": "V2",
+   "start": "2025-02-01",
+   "end": "2025-04-30",
+   "train_last_target": "2025-01-30",
+   "rows": 2135,
+   "scored_hours": 2135,
+   "rows_on_hindcast_runs": 0,
+   "scored_keys_sha256": "5395ba85b0f7e218845530e8ca916a633459a2610bdc994eb0ccdc38f52b7311"
+  },
+  {
+   "fold": "V3",
+   "start": "2025-05-01",
+   "end": "2025-06-30",
+   "train_last_target": "2025-04-29",
+   "rows": 1464,
+   "scored_hours": 1464,
+   "rows_on_hindcast_runs": 0,
+   "scored_keys_sha256": "234dbb34e30c534f596c1bbf748da2fb2e2e37e86d59cd610d3b2aeef75c336c"
+  }
+ ],
+ "test_period": {
+  "start": "2025-07-01",
+  "end": "2025-12-31",
+  "scored": false
+ },
+ "results": {
+  "09h": {
+   "pooled": {
+    "persistence": {
+     "hours": 5519,
+     "daylight_hours": 2954,
+     "complete_days": 230,
+     "mae_daylight": 96.03023860900474,
+     "mae_all": 51.410888068671866,
+     "rmse_daylight": 155.0404013459282,
+     "rmse_all": 113.4289297597479,
+     "bias_daylight": -0.5729993226134046,
+     "daily_mae": 1091.2521601782607,
+     "daily_bias": -7.14782608260869
+    },
+    "physics": {
+     "hours": 5519,
+     "daylight_hours": 2954,
+     "complete_days": 230,
+     "mae_daylight": 70.17181896198802,
+     "mae_all": 37.56112998980117,
+     "rmse_daylight": 100.74393612896414,
+     "rmse_all": 73.704502218357,
+     "bias_daylight": 16.43412521935889,
+     "daily_mae": 571.8000936979557,
+     "daily_bias": 211.01775086080946
+    }
+   },
+   "folds": {
+    "persistence": {
+     "V1": {
+      "hours": 1920,
+      "daylight_hours": 837,
+      "complete_days": 80,
+      "mae_daylight": 99.86054957825569,
+      "mae_all": 43.535126665104166,
+      "rmse_daylight": 171.4683724168722,
+      "rmse_all": 113.21296277368484,
+      "bias_daylight": 1.3142174444444459,
+      "daily_mae": 925.6119999125,
+      "daily_bias": 13.750000012499958
+     },
+     "V2": {
+      "hours": 2135,
+      "daylight_hours": 1151,
+      "complete_days": 89,
+      "mae_daylight": 119.39016507819288,
+      "mae_all": 64.3909710562061,
+      "rmse_daylight": 181.35704795795286,
+      "rmse_all": 133.16204783406212,
+      "bias_daylight": -4.570912251086011,
+      "daily_mae": 1312.1563686179775,
+      "daily_bias": -58.563595516853894
+     },
+     "V3": {
+      "hours": 1464,
+      "daylight_hours": 966,
+      "complete_days": 61,
+      "mae_daylight": 64.87781040269151,
+      "mae_all": 42.810467793032785,
+      "rmse_daylight": 94.03014696514344,
+      "rmse_all": 76.38096730278944,
+      "bias_daylight": 2.555362319875777,
+      "daily_mae": 986.1822957540982,
+      "daily_bias": 40.46163936065575
+     }
+    },
+    "physics": {
+     "V1": {
+      "hours": 1920,
+      "daylight_hours": 837,
+      "complete_days": 80,
+      "mae_daylight": 74.2656843925109,
+      "mae_all": 32.37694762319356,
+      "rmse_daylight": 105.51255419536247,
+      "rmse_all": 69.66526364180076,
+      "bias_daylight": 14.991791195281902,
+      "daily_mae": 358.39264613692677,
+      "daily_bias": 156.8095953806369
+     },
+     "V2": {
+      "hours": 2135,
+      "daylight_hours": 1151,
+      "complete_days": 89,
+      "mae_daylight": 73.34906733165558,
+      "mae_all": 39.54674384015718,
+      "rmse_daylight": 107.75310689581077,
+      "rmse_all": 79.11678215669909,
+      "bias_daylight": -11.319433619984169,
+      "daily_mae": 571.3418970274189,
+      "daily_bias": -146.47404153485138
+     },
+     "V3": {
+      "hours": 1464,
+      "daylight_hours": 966,
+      "complete_days": 61,
+      "mae_daylight": 62.83892223441554,
+      "mae_all": 41.464370818610256,
+      "rmse_daylight": 86.92446450989526,
+      "rmse_all": 70.60899964843696,
+      "bias_daylight": 50.752530811736015,
+      "daily_mae": 852.3472299038592,
+      "daily_bias": 803.6967994120818
+     }
+    }
+   },
+   "physics_minus_persistence": {
+    "days": 230,
+    "hours": 2954,
+    "difference": -25.858419647016724,
+    "low": -40.079793587808204,
+    "high": -11.753545015123535,
+    "daily_difference_autocorrelation": [
+     0.28737084119572204,
+     0.09009941119227399,
+     0.07979622756987406,
+     0.11068697532628188,
+     0.07883654582763382,
+     0.06568940793299002,
+     0.0813446360998713,
+     0.12330709056927472,
+     -0.012843920054619679,
+     0.0607458097218484,
+     0.007768343432387304,
+     0.029190548164766045,
+     0.022383583228748248,
+     -0.06355461881076294
+    ]
+   },
+   "lead": {
+    "persistence": {
+     "36": 1.3490196078431371,
+     "37": 11.78778947368421,
+     "38": 41.46997257534247,
+     "39": 60.32884173913044,
+     "40": 101.8504347652174,
+     "41": 146.781913026087,
+     "42": 147.3370435826087,
+     "43": 149.80313047826087,
+     "44": 151.74854966956522,
+     "45": 155.4089878826087,
+     "46": 125.88699819565217,
+     "47": 89.2753809,
+     "48": 49.176556556521746,
+     "49": 27.636646282485874,
+     "50": 5.494634146341465,
+     "51": 0.24258064516129035
+    },
+    "physics": {
+     "36": 0.7749019607843138,
+     "37": 9.837522720553551,
+     "38": 34.9893632670816,
+     "39": 43.82886962847938,
+     "40": 65.97848081345171,
+     "41": 88.29754355042361,
+     "42": 92.26685978564164,
+     "43": 93.7928089205877,
+     "44": 91.37684100797304,
+     "45": 90.02581559479817,
+     "46": 90.68840499816238,
+     "47": 92.73076249251726,
+     "48": 78.35859133445535,
+     "49": 56.867562478987516,
+     "50": 6.812180130459981,
+     "51": 0.19709410235461464
+    }
+   },
+   "slices": {
+    "season=DJF": {
+     "days": 90,
+     "reported": true,
+     "persistence": 104.14631256597937,
+     "physics": 78.03893852164197
+    },
+    "season=JJA": {
+     "days": 30,
+     "reported": true,
+     "persistence": 63.89800006666667,
+     "physics": 61.61552004835054
+    },
+    "season=MAM": {
+     "days": 92,
+     "reported": true,
+     "persistence": 94.63412848630138,
+     "physics": 67.46743203445098
+    },
+    "season=SON": {
+     "days": 18,
+     "reported": true,
+     "persistence": 145.42693052105264,
+     "physics": 70.32698700654244
+    },
+    "sky=clear": {
+     "days": 118,
+     "reported": true,
+     "persistence": 72.90910153544776,
+     "physics": 59.95647263707839
+    },
+    "sky=mixed": {
+     "days": 45,
+     "reported": true,
+     "persistence": 116.35248167781691,
+     "physics": 85.9162794610201
+    },
+    "sky=overcast": {
+     "days": 67,
+     "reported": true,
+     "persistence": 128.9810796773779,
+     "physics": 79.79061501212229
+    }
+   }
+  }
+ }
+}
