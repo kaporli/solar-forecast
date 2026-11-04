@@ -1,7 +1,7 @@
 {
  "experiment": "pvdaq",
- "built_at": "2026-11-04T10:23:48.215785+00:00",
- "code_commit": "2cb36e5abd24293f9446ba2ed9ac8c36f1746cb7",
+ "built_at": "2026-11-04T10:38:37.693407+00:00",
+ "code_commit": "99e178d99ecec115d79c1dd4e97a2b106d28dc15",
  "code_dirty": false,
  "command": "uv run solar-data evaluate pvdaq",
  "dataset_manifest": {
@@ -156,6 +156,7 @@
     }
    },
    "physics_minus_persistence": {
+    "calendar_days": 230,
     "days": 230,
     "hours": 2954,
     "difference": -25.858419647016724,
