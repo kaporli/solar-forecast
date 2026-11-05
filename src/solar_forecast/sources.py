@@ -230,12 +230,37 @@ def check_run_body(body: bytes) -> None:
         raise ValueError(j.get("reason"))
 
 
-def fetch_run(experiment: str, run: pd.Timestamp, store: Path = STORE) -> Path:
+LIVE_HOURS = 72  # live runs: the previous day's 00 UTC run still covers a target day (offsets 47 to 70 h)
+
+
+def fetch_run(experiment: str, run: pd.Timestamp, store: Path = STORE, hours: int | None = None) -> Path:
+    """`hours`: forecast length, by default the archive's (`weather_params`). Values for a given hour do not depend
+    on it, so a longer live run gives the same features for the hours both cover."""
     params = {"models": "ecmwf_ifs", "timezone": "UTC", "wind_speed_unit": "ms", "hourly": HOURLY,
               **weather_params(experiment), "run": run.strftime("%Y-%m-%dT%H:%M")}
+    if hours:
+        params["forecast_hours"] = hours
     url = f"{SINGLE_RUNS}?{urllib.parse.urlencode(params, safe=',')}"
     return fetch(f"weather-{experiment}", run.strftime("%Y%m%dT%H"), "json", url,
                  {"run": run.isoformat(), "params": params}, check=check_run_body, store=store)
+
+
+def fetch_new_runs(experiment: str, now, hours=(0, 6), store: Path = STORE) -> list[Path]:
+    """Today's runs at `hours` UTC that are not stored yet and at least three hours old, with `LIVE_HOURS` so they
+    can serve as the protocol's fallback the next day; a run Open-Meteo has not published yet is skipped and tried
+    again at the next capture."""
+    now = pd.Timestamp(now)
+    have = {pd.Timestamp(m["run"]) for m in snapshots(f"weather-{experiment}", store)}
+    out = []
+    for h in hours:
+        run = now.normalize() + pd.Timedelta(hours=h)
+        if run in have or run > now - pd.Timedelta(hours=3):
+            continue
+        try:
+            out.append(fetch_run(experiment, run, store, LIVE_HOURS))
+        except (ValueError, urllib.error.HTTPError) as e:
+            print("skipped", run, e, flush=True)
+    return out
 
 
 def parse_run(body: bytes, points: int) -> pd.DataFrame:
