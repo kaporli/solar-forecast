@@ -2,7 +2,8 @@
 
     uv run python tools/measure_artifact.py [artifacts/belgium]
 
-Prints JSON: hardware, process startup (interpreter + imports), artifact load, prediction time for one issuance
+Prints JSON: hardware, imports in this process, a fresh process launched and timed from outside (interpreter
+startup plus imports), artifact load, prediction time for one issuance
 (median of 50) and for all fixtures, peak RSS, and the largest difference from the fixtures' recorded predictions.
 Feature construction is not included; it is measured with the daily issuance."""
 import json
@@ -36,14 +37,16 @@ t = time.perf_counter()
 A.predict(model, man, fx)
 all_s = time.perf_counter() - t
 rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / (2**20 if sys.platform == "darwin" else 2**10)
-cold = subprocess.run([sys.executable, "-c", "import time; t=time.perf_counter(); import solar_forecast.artifact; "
-                       "print(time.perf_counter()-t)"], capture_output=True, text=True, check=True)
+t = time.perf_counter()  # timed outside the child, so interpreter startup is included
+subprocess.run([sys.executable, "-c", "import solar_forecast.artifact"], check=True)
+launch_s = time.perf_counter() - t
 cpu = next((ln.split(":", 1)[1].strip() for ln in Path("/proc/cpuinfo").read_text().splitlines()
             if ln.startswith("model name")), platform.processor()) if Path("/proc/cpuinfo").exists() else platform.processor()
 print(json.dumps({
     "host": {"cpu": cpu, "python": platform.python_version(), "system": f"{platform.system()} {platform.release()}"},
     "artifact": {"model_sha256": man["model_sha256"][:12], "model_mb": round(man["model_bytes"] / 2**20, 2)},
-    "imports_s": round(imports_s, 3), "imports_fresh_process_s": round(float(cold.stdout), 3), "load_s": round(load_s, 3),
+    "imports_in_this_process_s": round(imports_s, 3), "process_launch_and_imports_s": round(launch_s, 3),
+    "load_s": round(load_s, 3),
     "predict_one_issuance_s": round(statistics.median(times), 4), "issuance_rows": len(one),
     "predict_all_fixtures_s": round(all_s, 4), "fixture_rows": len(fx),
     "peak_rss_mb": round(rss), "parity_max_abs_mwh": A.parity(path),
