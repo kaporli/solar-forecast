@@ -1,0 +1,127 @@
+{
+ "experiment": "belgium",
+ "candidate": "gbm",
+ "created_at": "2026-11-05T10:41:59.601085+00:00",
+ "model_sha256": "85776a72578cd33a5569e195d874f83999ef0ed864ef58ecfb063af4159c0f99",
+ "model_bytes": 1468216,
+ "schema": {
+  "feature_version": "v1",
+  "required": [
+   "shortwave_radiation",
+   "direct_normal_irradiance",
+   "diffuse_radiation",
+   "temperature_2m",
+   "wind_speed_10m",
+   "cloud_cover",
+   "cos_zenith",
+   "solar_azimuth_deg",
+   "ghi_clearsky",
+   "day_of_year",
+   "local_hour",
+   "lead_hours",
+   "persistence_lf",
+   "capacity"
+  ],
+  "dtypes": {
+   "shortwave_radiation": "float64",
+   "direct_normal_irradiance": "float64",
+   "diffuse_radiation": "float64",
+   "temperature_2m": "float64",
+   "wind_speed_10m": "float64",
+   "cloud_cover": "float64",
+   "cos_zenith": "float64",
+   "solar_azimuth_deg": "float64",
+   "ghi_clearsky": "float64",
+   "day_of_year": "int16",
+   "local_hour": "int8",
+   "lead_hours": "float64",
+   "persistence_lf": "float64",
+   "capacity": "float64"
+  },
+  "builder": "features.features_for_issuance (one row per local hour of the target day)",
+  "output": "energy per hour in the experiment's unit, clipped to [0, capacity x 1 h]"
+ },
+ "recipe": {
+  "class": "GBM",
+  "name": "gbm",
+  "groups": [
+   "irradiance",
+   "temperature_cloud",
+   "geometry",
+   "calendar",
+   "lead",
+   "lags"
+  ],
+  "inputs": [
+   "shortwave_radiation",
+   "direct_normal_irradiance",
+   "diffuse_radiation",
+   "clearness",
+   "temperature_2m",
+   "wind_speed_10m",
+   "cloud_cover",
+   "cos_zenith",
+   "solar_azimuth_deg",
+   "ghi_clearsky",
+   "day_of_year",
+   "local_hour",
+   "lead_hours",
+   "persistence_lf"
+  ],
+  "physics": false,
+  "residual": false,
+  "params": {
+   "loss": "absolute_error",
+   "learning_rate": 0.05,
+   "max_iter": 400,
+   "max_leaf_nodes": 31,
+   "min_samples_leaf": 50,
+   "l2_regularization": 1.0,
+   "early_stopping": false,
+   "random_state": 0
+  },
+  "target": "load factor: actual / capacity known at issuance; prediction x capacity",
+  "seed": 0
+ },
+ "seed": 0,
+ "postprocessing": "every candidate's prediction is clipped to [0, capacity x 1 h]; the Elia benchmark is scored as published",
+ "fitted_on": {
+  "first_target": "2024-03-15",
+  "last_target": "2025-10-30",
+  "rows": 24397
+ },
+ "code_commit": "b577a32b4c36f2b7b559c4ac9a4fcf21b31e091b",
+ "lock_sha256": "0891b77d15e2c09fc69e43687da51d129da14b1e2c29688f9b82843639418f97",
+ "dataset_manifest": {
+  "file": "data/datasets/belgium-v1.json",
+  "sha256": "0d5f4c681c34e5a985a83a5989352cae365b1de96bf0b0fcb0196485c88dee0c"
+ },
+ "protocol": {
+  "file": "config/evaluation.json",
+  "sha256": "b12ed98577f75321d7fd1ce855da15614e8b141c0568bbaa36c5bae5b7e215d3"
+ },
+ "implementation_sha256": {
+  "models.py": "c7ebef51ce8f43f7e70694220eb305351dbda96d35ee4f0de9a8b20aa6417b11",
+  "artifact.py": "465b409175ea410e269143daab1932bcbe45fc6824d53faf2d9eaaf25e662a35"
+ },
+ "uv_lock_sha256": "8768ea74cf8ba9ce82b73305d03d3ee40531fac52e2cd204843d382aff97fae4",
+ "python": "3.13.7",
+ "versions": {
+  "numpy": "2.5.4",
+  "pandas": "3.1.0",
+  "scikit-learn": "1.9.1",
+  "pvlib": "0.16.1",
+  "pyarrow": "26.0.1",
+  "joblib": "1.6.0"
+ },
+ "fixtures": {
+  "file": "fixtures.parquet",
+  "sha256": "b386c0078e3e591755c36a0e5940abdeccc2408353c483077e50ed59f19bac10",
+  "rows": 146,
+  "target_days": [
+   "2026-01-15",
+   "2026-06-21",
+   "2026-10-25"
+  ]
+ }
+}
