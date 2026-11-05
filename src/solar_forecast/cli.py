@@ -238,6 +238,7 @@ def main(argv=None) -> None:
         if c == "build":
             s.add_argument("--inputs", help="rebuild from exactly the snapshots listed in a dataset manifest")
     sub.add_parser("contract")
+    sub.add_parser("snapshot", help="save the live Elia datasets (ods209, ods210) with their retrieval time")
     a = p.parse_args(argv)
     if a.cmd == "fetch":
         fetch(a.experiment, a.weather_only)
@@ -252,6 +253,9 @@ def main(argv=None) -> None:
     elif a.cmd == "lock":
         from .model_report import lock
         print(json.dumps(lock(a.experiment)["selection"], indent=1))
+    elif a.cmd == "snapshot":
+        for sel in ("ods209_total", "ods210_total"):  # Elia's day-ahead forecasts vanish from ods209 later
+            print("snapshot", sources.fetch_elia(sel).name)
     else:
         sys.stdout.write(F.contract_markdown())
 

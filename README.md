@@ -21,6 +21,7 @@ Hourly forecasts of Belgian aggregate solar production (Elia, "measured and upsc
 uv sync
 uv run pytest                          # offline: contract and transformation tests
 uv run solar-data fetch belgium        # snapshots: Elia ods032/ods209/ods210 and every needed weather run
+uv run solar-data snapshot             # only the live Elia datasets (ods209, ods210); scheduled twice a day
 uv run solar-data fetch pvdaq          # snapshots: PVDAQ 2107 files (checksums pinned) and weather runs
 uv run solar-data build belgium        # data/build/belgium-v1/{targets,features}.parquet, manifest, report
 uv run solar-data build belgium --inputs data/datasets/belgium-v1.json   # rebuild from the pinned snapshots
