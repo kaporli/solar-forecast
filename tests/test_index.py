@@ -88,3 +88,38 @@ def test_since_limits_the_quarter_hours_queried(put):
     con = I.connect(I.path_for([m]))
     ids = I.ingest(con, [m])
     assert len(I.resolved(con, ids)) == 2 and len(I.resolved(con, ids, since=pd.Timestamp("2026-11-05", tz="UTC"))) == 1
+
+
+@pytest.mark.parametrize("damage", ["corrupt", "missing"])
+def test_a_warm_index_still_verifies_every_raw_payload(put, damage):
+    import gzip
+    m = put(csv(measured="50.0"), "2026-11-05T09:00:00+00:00")
+    assert resolve([m])[0]["measured_mw"] == 50.0  # indexed
+    if damage == "corrupt":
+        m["path"].write_bytes(gzip.compress(csv(measured="99.0")))
+    else:
+        m["path"].unlink()
+    with pytest.raises((ValueError, FileNotFoundError)):
+        resolve([m])
+
+
+def test_shared_payload_is_read_once_per_ingest(put, monkeypatch):
+    metas = [put(csv(), "2026-11-05T09:00:00+00:00"), put(csv(), "2026-11-05T12:00:00+00:00")]
+    resolve(metas)
+    reads = []
+    real = sources.read_verified
+    monkeypatch.setattr(I.sources, "read_verified", lambda m: reads.append(m["path"]) or real(m))
+    resolve(metas)
+    assert len(reads) == 1
+
+
+def test_window_query_starts_from_the_time_index(put):
+    m = put(csv(), "2026-11-05T09:00:00+00:00")
+    con = I.connect(I.path_for([m]))
+    I._allowed(con, I.ingest(con, [m]))
+    sql = []
+    con.set_trace_callback(sql.append)
+    I.resolved(con, [1], since=pd.Timestamp("2026-11-05", tz="UTC"))
+    q = next(s for s in sql if s.startswith("SELECT e.dataset"))
+    plan = " ".join(r[3] for r in con.execute("EXPLAIN QUERY PLAN " + q))
+    assert "elia_rows_start" in plan and "SCAN s" not in plan

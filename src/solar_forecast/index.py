@@ -36,6 +36,7 @@ CREATE INDEX IF NOT EXISTS elia_rows_start ON elia_rows (start_ns);
 CREATE TABLE IF NOT EXISTS seen (
     retrieval_id INTEGER NOT NULL REFERENCES retrievals, row_id INTEGER NOT NULL REFERENCES elia_rows,
     PRIMARY KEY (retrieval_id, row_id)) WITHOUT ROWID;
+CREATE INDEX IF NOT EXISTS seen_row ON seen (row_id, retrieval_id);
 """
 
 
@@ -55,10 +56,16 @@ def _ns(ts) -> np.ndarray:
 
 
 def ingest(con: sqlite3.Connection, metas: list[dict]) -> list[int]:
-    """Index every snapshot not yet indexed (payload checksum verified) and return the retrieval ids of `metas`.
-    Refuses a sidecar whose bytes differ from when it was indexed."""
-    ids = []
+    """Index every snapshot not yet indexed and return the retrieval ids of `metas`. Every payload is verified on
+    every call, indexed or not, so a missing or changed raw input fails here and not silently through the cache;
+    a body shared by several retrievals is read once. Refuses a sidecar whose bytes differ from when it was
+    indexed."""
+    ids, verified = [], set()
     for m in metas:
+        obj = (str(m["path"]), m["sha256"])
+        if obj not in verified:
+            sources.read_verified(m)  # raises on a missing file or a checksum mismatch
+            verified.add(obj)
         key = Path(m["sidecar"]).name
         got = con.execute("SELECT id, sidecar_sha256 FROM retrievals WHERE sidecar = ?", (key,)).fetchone()
         if got:
@@ -107,13 +114,19 @@ def resolved(con: sqlite3.Connection, ids: list[int], as_of=None, since=None) ->
     """Quarter-hours as `features.BelgiumInputs.resolved`: datetime, region, the four fields and the retrieval time
     of the winning row. `as_of`: only retrievals at or before it. `since`: only quarter-hours starting from it."""
     _allowed(con, ids)
-    q = ("SELECT e.dataset, e.region, e.start_ns, e.measured_mw, e.capacity_mw, e.elia_da11_mw, e.elia_da18_mw,"
-         " MAX(r.retrieved_ns) AS retrieved_ns FROM seen s JOIN allowed a ON a.id = s.retrieval_id"
-         " JOIN retrievals r ON r.id = s.retrieval_id JOIN elia_rows e ON e.id = s.row_id"
-         " WHERE (? IS NULL OR r.retrieved_ns <= ?) AND (? IS NULL OR e.start_ns >= ?) GROUP BY e.id")
+    cols = "e.dataset, e.region, e.start_ns, e.measured_mw, e.capacity_mw, e.elia_da11_mw, e.elia_da18_mw, MAX(r.retrieved_ns)"
     a = None if as_of is None else int(_ns([pd.Timestamp(as_of)])[0])
-    s = None if since is None else int(_ns([pd.Timestamp(since)])[0])
-    cur, cols, parts = con.execute(q, (a, a, s, s)), ["dataset", "region", "start_ns", *FIELDS, "retrieved_ns"], []
+    if since is None:  # full history: walk the links once
+        q = (f"SELECT {cols} FROM seen s JOIN allowed al ON al.id = s.retrieval_id JOIN retrievals r ON r.id = s.retrieval_id"
+             " JOIN elia_rows e ON e.id = s.row_id WHERE (? IS NULL OR r.retrieved_ns <= ?) GROUP BY e.id")
+        args = (a, a)
+    else:  # a recent window: start from the quarter-hours (elia_rows_start), then their sightings (seen_row);
+        # CROSS JOIN fixes that order, so the work follows the window and not the size of `seen`
+        q = (f"SELECT {cols} FROM elia_rows e INDEXED BY elia_rows_start CROSS JOIN seen s ON s.row_id = e.id CROSS JOIN retrievals r"
+             " ON r.id = s.retrieval_id WHERE e.start_ns >= ? AND s.retrieval_id IN (SELECT id FROM allowed)"
+             " AND (? IS NULL OR r.retrieved_ns <= ?) GROUP BY e.id")
+        args = (int(_ns([pd.Timestamp(since)])[0]), a, a)
+    cur, cols, parts = con.execute(q, args), ["dataset", "region", "start_ns", *FIELDS, "retrieved_ns"], []
     while chunk := cur.fetchmany(100_000):  # compact frames, not a million Python tuples at once
         parts.append(pd.DataFrame(chunk, columns=cols).astype({"dataset": "category", "region": "category"}))
     d = pd.concat(parts, ignore_index=True) if parts else pd.DataFrame(columns=cols)
