@@ -96,13 +96,17 @@ def fetch(source: str, name: str, ext: str, url: str, extra: dict, check=None, s
 
 def snapshots(source: str, store: Path = STORE) -> list[dict]:
     """Sidecars of one source, with `path` (payload), `sidecar` and `sidecar_sha256`, oldest first."""
-    out = []
-    for p in sorted((store / source).glob("*.meta.json")):
-        meta = json.loads(p.read_text())
-        if "file" in meta or "object" in meta:
-            path = store.parent / meta["object"] if "object" in meta else p.parent / meta["file"]
-            out.append({**meta, "path": path, "sidecar": p, "sidecar_sha256": sha256(p.read_bytes())})
-    return sorted(out, key=lambda m: m["retrieved_at"])
+    out = [snapshot(p, store) for p in sorted((store / source).glob("*.meta.json"))]
+    return sorted([m for m in out if m], key=lambda m: m["retrieved_at"])
+
+
+def snapshot(sidecar: Path, store: Path = STORE) -> dict | None:
+    """One sidecar as `snapshots` lists it (None for a file that is not a snapshot sidecar)."""
+    meta = json.loads(sidecar.read_text())
+    if "file" not in meta and "object" not in meta:
+        return None
+    path = store.parent / meta["object"] if "object" in meta else sidecar.parent / meta["file"]
+    return {**meta, "path": path, "sidecar": sidecar, "sidecar_sha256": sha256(sidecar.read_bytes())}
 
 
 def read_verified(meta: dict) -> bytes:
@@ -268,7 +272,7 @@ def fetch_pvdaq(manifest: dict, store: Path = STORE) -> list[Path]:
         if name in have:
             continue
         p = fetch("pvdaq", name, Path(f["path"]).suffix[1:], f"{prod['base_url']}/{f['path']}", {"manifest_sha256": f["sha256"]}, store=store)
-        if sha256(p.read_bytes()) != f["sha256"]:
+        if sha256(read_verified(snapshot(p, store))) != f["sha256"]:  # the stored payload, not the sidecar
             raise ValueError(f"{p.name}: checksum changed upstream")
         out.append(p)
     return out
