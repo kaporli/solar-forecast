@@ -159,3 +159,18 @@ def test_report_period_follows_the_weather_run():
     assert period(pd.Timestamp("2024-11-11 06:00Z")).startswith("hindcast")  # used for target day 2024-11-12
     assert period(pd.Timestamp("2024-11-12 00:00Z")).startswith("runs from")
     assert period(pd.NaT) == "no run"
+
+
+def test_fresh_pvdaq_download_is_checked_against_the_manifest(tmp_path, monkeypatch):
+    body = b"timestamp,ac_power\n"
+    manifest = {"installation_experiment": {"production": {"base_url": "https://example.invalid", "files": [
+        {"path": "2107_meter_15m_data_2024.csv", "sha256": sources.sha256(body)}]}}}
+    monkeypatch.setattr(sources, "get", lambda url: body)
+    store = tmp_path / "snapshots"
+    [p] = sources.fetch_pvdaq(manifest, store)
+    assert sources.read_verified(sources.snapshot(p, store)) == body
+    assert sources.fetch_pvdaq(manifest, store) == []  # already stored
+    manifest["installation_experiment"]["production"]["files"][0]["path"] = "2107_meter_15m_data_2025.csv"
+    monkeypatch.setattr(sources, "get", lambda url: b"changed upstream")
+    with pytest.raises(ValueError, match="changed upstream"):
+        sources.fetch_pvdaq(manifest, store)
