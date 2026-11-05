@@ -5,8 +5,17 @@ Decisions for #3, applied by `uv run solar-data build <experiment>`. Column defi
 
 ## Inputs
 
-- Every retrieval is an append-only snapshot in `data/raw/snapshots/<source>/` with a sidecar (request,
-  SHA-256, `request_started_at`, `retrieved_at`). The build reads only snapshots and verifies each checksum.
+- Every retrieval is an append-only snapshot: a sidecar in `data/raw/snapshots/<source>/` (request,
+  SHA-256 of the response bytes, `request_started_at`, `retrieved_at`). Since 2026-11-05 the body is stored once
+  per distinct content, gzip-compressed and named by that SHA-256, in `data/raw/objects/`; identical responses
+  share one object and keep one sidecar each. Earlier snapshots keep their plain payload next to the sidecar and
+  are never rewritten. The build reads only snapshots and verifies each checksum on the original bytes.
+- Elia collection (storage decision in #6): routine captures fetch the last 14 days of ods209 (plus the forecast
+  days published ahead) and the ods210 window, at 10:30 and 17:30 (inputs before the 11:00 and 18:00 issuances)
+  and 11:30 and 18:30 Europe/Brussels (Elia's new day-ahead forecasts). `solar-data snapshot --reconcile` fetches
+  every calendar month of ods209 since 2026-10, once a month, to find later revisions; a revision is available
+  from the retrieval that found it, never earlier. Requests are bounded by UTC dates and ordered by time and
+  region, so unchanged content gives identical bytes.
 - The dataset manifest `data/datasets/<experiment>-v1.json` lists every snapshot used with the SHA-256 of its
   payload and of its sidecar. The sidecar decides availability (`retrieved_at`) and identity (run, dataset), so
   `--inputs` rebuilds from exactly those and refuses a missing file or a changed payload or sidecar.

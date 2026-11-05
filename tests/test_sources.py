@@ -1,3 +1,4 @@
+import gzip
 import json
 import uuid
 
@@ -8,6 +9,9 @@ from solar_forecast import sources
 from solar_forecast.sources import ROOT
 
 from conftest import elia_csv, run_json
+
+
+D = lambda x: pd.Timestamp(x).date()
 
 
 def test_ods209_decimal_comma_and_region_names():
@@ -85,10 +89,36 @@ def test_snapshots_never_overwrite(tmp_path, monkeypatch):
 
 
 def test_tampered_snapshot_rejected(tmp_path):
-    p = sources.save("elia", "x", "csv", b"body", {"retrieved_at": "2026-11-03T10:00:00+00:00"}, tmp_path)
-    p.write_bytes(b"changed")
+    sources.save("elia", "x", "csv", b"body", {"retrieved_at": "2026-11-03T10:00:00+00:00"}, tmp_path)
+    m = sources.snapshots("elia", tmp_path)[0]
+    m["path"].write_bytes(gzip.compress(b"changed"))
     with pytest.raises(ValueError, match="checksum"):
-        sources.read_verified(sources.snapshots("elia", tmp_path)[0])
+        sources.read_verified(m)
+
+
+def test_identical_responses_share_one_object_but_keep_every_retrieval(tmp_path):
+    store = tmp_path / "snapshots"
+    for t in ("2026-11-05T10:30:00+00:00", "2026-11-05T17:30:00+00:00"):
+        sources.save("elia", "x", "csv", b"same body", {"retrieved_at": t}, store)
+    ms = sources.snapshots("elia", store)
+    assert [m["retrieved_at"] for m in ms] == ["2026-11-05T10:30:00+00:00", "2026-11-05T17:30:00+00:00"]
+    assert ms[0]["path"] == ms[1]["path"] and len(list((tmp_path / "objects").rglob("*.gz"))) == 1
+    assert ms[0]["sidecar"] != ms[1]["sidecar"]
+    assert sources.read_verified(ms[1]) == b"same body"  # hash of the original, decompressed bytes
+
+
+def test_legacy_plain_payloads_stay_readable(tmp_path):
+    body = b"legacy"
+    (tmp_path / "elia").mkdir()
+    (tmp_path / "elia/x_1.csv").write_bytes(body)
+    (tmp_path / "elia/x_1.meta.json").write_text(json.dumps(
+        {"retrieved_at": "2026-11-03T10:00:00+00:00", "file": "x_1.csv", "sha256": sources.sha256(body)}))
+    assert sources.read_verified(sources.snapshots("elia", tmp_path)[0]) == body
+
+
+def test_ods209_reconciliation_uses_fixed_calendar_months():
+    assert sources.elia_months("2026-12-03") == [(D("2026-10-01"), D("2026-11-01")), (D("2026-11-01"), D("2026-12-01")),
+                                                 (D("2026-12-01"), D("2027-01-01"))]
 
 
 def test_get_does_not_retry_permanent_client_errors(monkeypatch):
@@ -129,3 +159,18 @@ def test_report_period_follows_the_weather_run():
     assert period(pd.Timestamp("2024-11-11 06:00Z")).startswith("hindcast")  # used for target day 2024-11-12
     assert period(pd.Timestamp("2024-11-12 00:00Z")).startswith("runs from")
     assert period(pd.NaT) == "no run"
+
+
+def test_fresh_pvdaq_download_is_checked_against_the_manifest(tmp_path, monkeypatch):
+    body = b"timestamp,ac_power\n"
+    manifest = {"installation_experiment": {"production": {"base_url": "https://example.invalid", "files": [
+        {"path": "2107_meter_15m_data_2024.csv", "sha256": sources.sha256(body)}]}}}
+    monkeypatch.setattr(sources, "get", lambda url: body)
+    store = tmp_path / "snapshots"
+    [p] = sources.fetch_pvdaq(manifest, store)
+    assert sources.read_verified(sources.snapshot(p, store)) == body
+    assert sources.fetch_pvdaq(manifest, store) == []  # already stored
+    manifest["installation_experiment"]["production"]["files"][0]["path"] = "2107_meter_15m_data_2025.csv"
+    monkeypatch.setattr(sources, "get", lambda url: b"changed upstream")
+    with pytest.raises(ValueError, match="changed upstream"):
+        sources.fetch_pvdaq(manifest, store)
