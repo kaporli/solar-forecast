@@ -1,0 +1,20 @@
+{
+ "host": {
+  "cpu": "Intel(R) Core(TM) i7-10700T CPU @ 2.00GHz",
+  "python": "3.13.5",
+  "system": "Linux 7.0.14-23-pve"
+ },
+ "artifact": {
+  "model_sha256": "85776a72578c",
+  "model_mb": 1.4
+ },
+ "imports_in_this_process_s": 0.517,
+ "process_launch_and_imports_s": 0.608,
+ "load_s": 0.443,
+ "predict_one_issuance_s": 0.0082,
+ "issuance_rows": 25,
+ "predict_all_fixtures_s": 0.0096,
+ "fixture_rows": 146,
+ "peak_rss_mb": 181,
+ "parity_max_abs_mwh": 0.0
+}
