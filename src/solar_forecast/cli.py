@@ -40,8 +40,10 @@ def fetch(name: str, weather_only: bool = False, workers: int = 4) -> None:
     if weather_only:
         pass
     elif name == "belgium":
-        for sel in sources.elia_selections():
-            print("snapshot", sources.fetch_elia(sel).name)
+        today = pd.Timestamp.now(tz="UTC").date()
+        got = [sources.fetch_elia(s) for s in ("ods032_belgium", "ods032_provinces")]
+        for p in got + sources.elia_reconcile(today) + sources.elia_routine(today):
+            print("snapshot", p.name)
     else:
         print("pvdaq files", [p.name for p in sources.fetch_pvdaq(json.loads((ROOT / "data/manifest.json").read_text()))])
     have = {pd.Timestamp(m["run"]) for m in sources.snapshots(f"weather-{name}")}
@@ -70,18 +72,21 @@ def _select(source: str, pinned: dict | None) -> list[dict]:
     metas = sources.snapshots(source)
     if pinned is None:
         return metas
-    want = {e["file"]: e for e in pinned["inputs"] if e["source"] == source}
-    got = [m for m in metas if _rel(m["path"]) in want]
-    if len(got) != len(want):
-        raise SystemExit(f"{source}: {len(want) - len(got)} pinned snapshots are not in data/raw/snapshots")
-    for m in got:
-        e = want[_rel(m["path"])]
+    # one entry per retrieval, found by its sidecar: retrievals with identical content share one stored object
+    by_sidecar = {_rel(m["sidecar"]): m for m in metas}
+    by_file = {_rel(m["path"]): m for m in metas}
+    entries = [e for e in pinned["inputs"] if e["source"] == source]
+    found = [(e, by_sidecar.get(e["sidecar"]) if "sidecar" in e else by_file.get(e["file"])) for e in entries]
+    got = [m for _, m in found if m is not None]
+    if len(got) != len(entries):
+        raise SystemExit(f"{source}: {len(entries) - len(got)} pinned snapshots are not in data/raw/snapshots")
+    for e, m in found:
         if m["sha256"] != e["sha256"]:
             raise SystemExit(f"{m['path']}: payload checksum differs from the manifest")
         # the sidecar decides availability (retrieved_at) and identity (run, dataset): pinned byte for byte
         if m["sidecar_sha256"] != e.get("sidecar_sha256"):
             raise SystemExit(f"{m['sidecar']}: sidecar differs from the manifest")
-    return got
+    return sorted(got, key=lambda m: m["retrieved_at"])  # oldest first, as `sources.snapshots`
 
 
 def content_hash(df: pd.DataFrame) -> str:
@@ -238,7 +243,8 @@ def main(argv=None) -> None:
         if c == "build":
             s.add_argument("--inputs", help="rebuild from exactly the snapshots listed in a dataset manifest")
     sub.add_parser("contract")
-    sub.add_parser("snapshot", help="save the live Elia datasets (ods209, ods210) with their retrieval time")
+    s = sub.add_parser("snapshot", help="save the live Elia datasets (ods209 last 14 days, ods210) with retrieval time")
+    s.add_argument("--reconcile", action="store_true", help="instead, every calendar month of ods209 history")
     a = p.parse_args(argv)
     if a.cmd == "fetch":
         fetch(a.experiment, a.weather_only)
@@ -253,9 +259,10 @@ def main(argv=None) -> None:
     elif a.cmd == "lock":
         from .model_report import lock
         print(json.dumps(lock(a.experiment)["selection"], indent=1))
-    elif a.cmd == "snapshot":
-        for sel in ("ods209_total", "ods210_total"):  # Elia's day-ahead forecasts vanish from ods209 later
-            print("snapshot", sources.fetch_elia(sel).name)
+    elif a.cmd == "snapshot":  # Elia's day-ahead forecasts vanish from ods209 later
+        today = pd.Timestamp.now(tz="UTC").date()
+        for p in (sources.elia_reconcile if a.reconcile else sources.elia_routine)(today):
+            print("snapshot", p.name)
     else:
         sys.stdout.write(F.contract_markdown())
 

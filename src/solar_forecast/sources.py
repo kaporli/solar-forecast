@@ -1,11 +1,15 @@
 """Retrieval into an append-only snapshot store, and parsing with validation.
 
-Every response is written once to data/raw/snapshots/<source>/<name>_<UTC>_<uuid>.<ext> with a sidecar (.meta.json)
-holding the request, SHA-256, request_started_at and retrieved_at (response fully received). Nothing is
-overwritten. Builds read only from this store.
+Every retrieval gets its own sidecar, data/raw/snapshots/<source>/<name>_<UTC>_<uuid>.meta.json, holding the request,
+SHA-256 of the response bytes, request_started_at and retrieved_at (response fully received). The response body is
+stored once per distinct content, gzip-compressed and named by that SHA-256: data/raw/objects/<sha[:2]>/<sha>.<ext>.gz
+(sidecar key `object`). Snapshots taken before 2026-11-05 keep their plain payload next to the sidecar (key `file`)
+and are never rewritten, so existing dataset manifests still pin them. Nothing is overwritten. Builds read only from
+this store.
 """
 from __future__ import annotations
 
+import gzip
 import hashlib
 import io
 import json
@@ -53,16 +57,24 @@ def sha256(b: bytes) -> str:
 
 
 def save(source: str, name: str, ext: str, body: bytes, meta: dict, store: Path = STORE) -> Path:
+    """Write the body once per content (an existing object is kept, not replaced) and a new sidecar for this
+    retrieval. Returns the sidecar path."""
     out = store / source
     out.mkdir(parents=True, exist_ok=True)
+    digest = sha256(body)
+    obj = Path("objects") / digest[:2] / f"{digest}.{ext}.gz"
+    path = store.parent / obj
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_name(f".{path.name}.{uuid.uuid4().hex}")
+        tmp.write_bytes(gzip.compress(body, mtime=0))
+        tmp.rename(path)  # atomic: a reader never sees a partial object
     stem = f"{name}_{meta['retrieved_at'].replace(':', '').replace('-', '').replace('+0000', 'Z')}_{uuid.uuid4().hex}"
-    path = out / f"{stem}.{ext}"
-    with open(path, "xb") as f:  # exclusive: an existing snapshot is never replaced
-        f.write(body)
-    with open(out / f"{stem}.meta.json", "x") as f:
-        json.dump({**meta, "source": source, "name": name, "file": path.name,
-                   "bytes": len(body), "sha256": sha256(body)}, f, indent=1)
-    return path
+    sidecar = out / f"{stem}.meta.json"
+    with open(sidecar, "x") as f:  # exclusive: an existing retrieval record is never replaced
+        json.dump({**meta, "source": source, "name": name, "object": str(obj),
+                   "bytes": len(body), "sha256": digest}, f, indent=1)
+    return sidecar
 
 
 def fetch(source: str, name: str, ext: str, url: str, extra: dict, check=None, store: Path = STORE) -> Path:
@@ -87,13 +99,16 @@ def snapshots(source: str, store: Path = STORE) -> list[dict]:
     out = []
     for p in sorted((store / source).glob("*.meta.json")):
         meta = json.loads(p.read_text())
-        if "file" in meta:
-            out.append({**meta, "path": p.parent / meta["file"], "sidecar": p, "sidecar_sha256": sha256(p.read_bytes())})
+        if "file" in meta or "object" in meta:
+            path = store.parent / meta["object"] if "object" in meta else p.parent / meta["file"]
+            out.append({**meta, "path": path, "sidecar": p, "sidecar_sha256": sha256(p.read_bytes())})
     return sorted(out, key=lambda m: m["retrieved_at"])
 
 
 def read_verified(meta: dict) -> bytes:
-    body = Path(meta["path"]).read_bytes()
+    """The original response bytes (decompressed for stored objects), checked against the sidecar's SHA-256."""
+    path = Path(meta["path"])
+    body = gzip.decompress(path.read_bytes()) if path.suffix == ".gz" else path.read_bytes()
     if sha256(body) != meta["sha256"]:
         raise ValueError(f"{meta['path']}: checksum does not match its sidecar")
     return body
@@ -116,10 +131,39 @@ def elia_selections() -> dict[str, dict]:
     }
 
 
-def fetch_elia(name: str, store: Path = STORE) -> Path:
-    s = elia_selections()[name]
-    q = urllib.parse.urlencode({"where": s["where"], "select": s["select"], "order_by": "datetime", "delimiter": ","})
+def fetch_elia(name: str, start=None, end=None, store: Path = STORE) -> Path:
+    """One selection, optionally bounded to UTC dates [start, end), ordered by time and region so identical content
+    gives identical bytes (and one stored object)."""
+    s = dict(elia_selections()[name])
+    if start is not None:
+        s |= {"where": f"{s['where']} and datetime >= date'{start}' and datetime < date'{end}'",
+              "start": str(start), "end": str(end)}
+    q = urllib.parse.urlencode({"where": s["where"], "select": s["select"], "order_by": "datetime,region",
+                                "delimiter": ","})
     return fetch("elia", name, "csv", f"{ELIA}/{s['dataset']}/exports/csv?{q}", s, store=store)
+
+
+ODS209_FIRST_MONTH = "2026-10-01"  # ods209 starts 2026-10-26 (protocol A)
+
+
+def elia_routine(today, store: Path = STORE) -> list[Path]:
+    """Scheduled capture: the latest 14 days of ods209 (plus the forecast days Elia publishes ahead) and the ods210
+    live window."""
+    d = pd.Timestamp(today).date()
+    return [fetch_elia("ods209_total", d - pd.Timedelta(days=14), d + pd.Timedelta(days=15), store),
+            fetch_elia("ods210_total", store=store)]
+
+
+def elia_months(today) -> list[tuple]:
+    """Fixed calendar-month partitions of ods209 from its first month through the current one."""
+    first = pd.Period(ODS209_FIRST_MONTH, "M")
+    return [(m.start_time.date(), (m + 1).start_time.date()) for m in pd.period_range(first, pd.Timestamp(today).to_period("M"))]
+
+
+def elia_reconcile(today, store: Path = STORE) -> list[Path]:
+    """Monthly recheck of older ods209 history, one response per calendar month, to find later revisions. A
+    revision becomes known at this retrieval; its availability is never backdated."""
+    return [fetch_elia("ods209_total", a, b, store) for a, b in elia_months(today)]
 
 
 ELIA_COLUMNS = {"measured": "measured_mw", "measured_upscaled": "measured_mw", "monitoredcapacity": "capacity_mw",
