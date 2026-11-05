@@ -45,3 +45,19 @@ pipeline, which needs its own resource measurement.
 - **Missing hours** stay missing; coverage is reported, and daily-total metrics still require a complete day.
 - **Versions:** a later correction or a newly supplied observation creates a new immutable score version that
   references the actuals used and their retrieval time. Earlier versions are kept.
+
+## Daily issuance
+
+- **Captures** (`solar-data snapshot`, 10:30, 11:30, 17:30 and 18:30 Europe/Brussels): Elia ods209 (last 14 days)
+  and ods210, and today's 00 UTC and 06 UTC weather runs once they are at least three hours old. Live runs are
+  fetched with 72 hours instead of the archive's 49, so the previous day's run still covers a target day when
+  the protocol's fallback needs it; values for an hour do not depend on the length.
+- **Issuance** (`solar-data issue belgium --kind 11h|18h`, one minute after 11:00 and 18:00): only snapshots
+  retrieved by the issuance time count. Elia from the last three days of retrievals, queried from 12 days before
+  the target day; the prescribed run, or the latest earlier run labelled `fallback`. The packaged model
+  predicts; persistence and physics are recorded beside it.
+- **Records:** `data/forecasts/belgium/<target>_<kind>.json`, created exclusively, so a retry cannot replace an
+  issued forecast. Each holds the issuance and computation times, code commit, model checksums, feature version
+  and content hash, the weather run and how it was obtained, capacity, the checksum of every input snapshot, and
+  per hour the forecast, persistence and physics in MWh. A failed attempt writes
+  `<target>_<kind>.failed-<UTC>.json` and no forecast; there is no fallback model.
