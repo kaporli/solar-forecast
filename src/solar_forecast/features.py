@@ -21,7 +21,7 @@ from typing import Callable
 import numpy as np
 import pandas as pd
 
-from . import sources
+from . import index, sources
 from .targets import belgium_target, parse_pvdaq_meta, pvdaq_quarter_hours, pvdaq_target
 from .weather import HOUR, day_hours, hour_weather, solar
 
@@ -129,34 +129,26 @@ class _Weather:
 
 
 class BelgiumInputs:
-    """Elia quarter-hours from every snapshot (archive datasets take precedence over ods210, newer retrievals over
-    older, column by column) and the weather snapshots."""
+    """Elia quarter-hours from the given snapshots through the SQLite index beside the archive (`index`): archive
+    datasets take precedence over ods210, newer retrievals over older, column by column. Only these snapshots count,
+    so a pinned build sees exactly its manifest's inputs. `since`: only quarter-hours from then (daily inference
+    needs its persistence window and capacity, not the whole history). And the weather snapshots."""
 
-    PRIORITY = {"ods032": 0, "ods209": 0, "ods210": 1}
-
-    def __init__(self, elia_metas: list[dict], weather_metas: list[dict], exp: Experiment):
-        self.exp = exp
-        frames = []
-        self.stats = {"snapshots": {}, "duplicates_dropped": 0}
-        for m in elia_metas:
-            f = sources.parse_elia(sources.read_verified(m), m["dataset"])
-            self.stats["duplicates_dropped"] += f.attrs["duplicates_dropped"]
-            self.stats["snapshots"][m["name"]] = self.stats["snapshots"].get(m["name"], 0) + 1
-            frames.append(f.assign(retrieved_at=_ts(m["retrieved_at"]), priority=self.PRIORITY[m["dataset"]]))
-        self.qh = pd.concat(frames, ignore_index=True)
+    def __init__(self, elia_metas: list[dict], weather_metas: list[dict], exp: Experiment, since=None):
+        self.exp, self.since = exp, since
+        self.con = index.connect(index.path_for(elia_metas))
+        self.ids = index.ingest(self.con, elia_metas)
+        self.stats = index.stats(self.con, self.ids)
         self.weather = _Weather(weather_metas, len(exp.points))
         self.region_order = [p["ods209"] for p in sources.config("belgium")["weather_points"]["provinces"]]
 
     @lru_cache(maxsize=8)
     def resolved(self, as_of=None) -> pd.DataFrame:
-        q = self.qh if as_of is None else self.qh[self.qh["retrieved_at"] <= as_of]
-        q = q.sort_values(["priority", "retrieved_at"], ascending=[True, False])
-        return q.groupby(["datetime", "region"], sort=True).first().reset_index().drop(columns="priority")
+        return index.resolved(self.con, self.ids, as_of, self.since)
 
     def revisions(self) -> int:
         """Quarter-hours of region Belgium whose measured value differs between snapshots."""
-        b = self.qh[self.qh["region"] == "Belgium"].dropna(subset=["measured_mw"])
-        return int((b.groupby("datetime")["measured_mw"].agg(lambda s: s.max() - s.min()) > 1e-6).sum())
+        return index.revisions(self.con, self.ids)
 
     @lru_cache(maxsize=8)
     def targets(self, as_of=None) -> pd.DataFrame:

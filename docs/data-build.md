@@ -16,6 +16,13 @@ Decisions for #3, applied by `uv run solar-data build <experiment>`. Column defi
   every calendar month of ods209 since 2026-10, once a month, to find later revisions; a revision is available
   from the retrieval that found it, never earlier. Requests are bounded by UTC dates and ordered by time and
   region, so unchanged content gives identical bytes.
+- Elia observations are read through a SQLite index beside the archive (`data/raw/index.sqlite`,
+  `solar_forecast/index.py`), filled from the snapshots on first use and rebuildable by deleting it. It stores each
+  distinct quarter-hour version once and which retrieval delivered it, so builds no longer parse every snapshot
+  and an unchanged observation keeps its provenance. Resolution is the archive rule below, field by field, over
+  exactly the snapshots a build is given (a pinned build: its manifest's), restricted to retrievals up to the
+  as-of time and optionally to recent quarter-hours. Rebuilding `belgium-v1` through it gives the same content
+  hashes.
 - The dataset manifest `data/datasets/<experiment>-v1.json` lists every snapshot used with the SHA-256 of its
   payload and of its sidecar. The sidecar decides availability (`retrieved_at`) and identity (run, dataset), so
   `--inputs` rebuilds from exactly those and refuses a missing file or a changed payload or sidecar.
