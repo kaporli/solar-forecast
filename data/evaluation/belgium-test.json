@@ -3,7 +3,7 @@
  "run_at": "2026-11-04T12:51:21.541487+00:00",
  "command": "uv run python -m solar_forecast.final_test belgium",
  "rehearsal": false,
- "code_commit": "98ff6f7dcaef83497e9fa416a770c3f4618fd6a1",
+ "code_commit": "b577a32b4c36f2b7b559c4ac9a4fcf21b31e091b",
  "code_dirty": false,
  "lock": {
   "file": "config/lock-belgium.json",
@@ -342,37 +342,47 @@
      "before 2026-10-26 (ods032)": {
       "days": 358,
       "enough_days": true,
+      "daylight_hours": 4741,
       "mae_daylight": {
        "gbm": 392.36567036034364,
        "persistence": 896.9348260619629,
        "physics": 596.7598002003567,
-       "physics_calibrated": 537.3395046172803,
-       "elia": 314.6076758595233
+       "physics_calibrated": 537.3395046172803
       },
-      "daylight_hours": {
-       "gbm": 4741,
-       "persistence": 4741,
-       "physics": 4741,
-       "physics_calibrated": 4741,
-       "elia": 4741
+      "elia_subset": {
+       "days": 358,
+       "enough_days": true,
+       "daylight_hours": 4741,
+       "mae_daylight": {
+        "gbm": 392.36567036034364,
+        "persistence": 896.9348260619629,
+        "physics": 596.7598002003567,
+        "physics_calibrated": 537.3395046172803,
+        "elia": 314.6076758595233
+       }
       }
      },
      "from 2026-10-26 (ods209)": {
       "days": 6,
       "enough_days": false,
+      "daylight_hours": 66,
       "mae_daylight": {
        "gbm": 286.9549360968136,
        "persistence": 955.9685716726841,
        "physics": 1000.4252133176199,
-       "physics_calibrated": 514.8982108507636,
-       "elia": 318.60465909090914
+       "physics_calibrated": 514.8982108507636
       },
-      "daylight_hours": {
-       "gbm": 66,
-       "persistence": 66,
-       "physics": 66,
-       "physics_calibrated": 66,
-       "elia": 22
+      "elia_subset": {
+       "days": 2,
+       "enough_days": false,
+       "daylight_hours": 22,
+       "mae_daylight": {
+        "gbm": 303.3091160100291,
+        "persistence": 972.8950272448823,
+        "physics": 750.8618087934542,
+        "physics_calibrated": 466.9018593698065,
+        "elia": 318.60465909090914
+       }
       }
      }
     },
@@ -380,73 +390,93 @@
      "SON": {
       "days": 91,
       "enough_days": true,
+      "daylight_hours": 1066,
       "mae_daylight": {
        "gbm": 378.2654017009033,
        "persistence": 973.817284429806,
        "physics": 699.1703062899079,
-       "physics_calibrated": 477.8347337253076,
-       "elia": 314.3944691780822
+       "physics_calibrated": 477.8347337253076
       },
-      "daylight_hours": {
-       "gbm": 1066,
-       "persistence": 1066,
-       "physics": 1066,
-       "physics_calibrated": 1066,
-       "elia": 1022
+      "elia_subset": {
+       "days": 87,
+       "enough_days": true,
+       "daylight_hours": 1022,
+       "mae_daylight": {
+        "gbm": 382.5486232710312,
+        "persistence": 974.9500881322539,
+        "physics": 680.8282213498385,
+        "physics_calibrated": 475.20585630250815,
+        "elia": 314.3944691780822
+       }
       }
      },
      "DJF": {
       "days": 90,
       "enough_days": true,
+      "daylight_hours": 888,
       "mae_daylight": {
        "gbm": 375.71423944127713,
        "persistence": 704.8700311905769,
        "physics": 803.4981178097562,
-       "physics_calibrated": 588.7631502583815,
-       "elia": 273.6835470157658
+       "physics_calibrated": 588.7631502583815
       },
-      "daylight_hours": {
-       "gbm": 888,
-       "persistence": 888,
-       "physics": 888,
-       "physics_calibrated": 888,
-       "elia": 888
+      "elia_subset": {
+       "days": 90,
+       "enough_days": true,
+       "daylight_hours": 888,
+       "mae_daylight": {
+        "gbm": 375.71423944127713,
+        "persistence": 704.8700311905769,
+        "physics": 803.4981178097562,
+        "physics_calibrated": 588.7631502583815,
+        "elia": 273.6835470157658
+       }
       }
      },
      "MAM": {
       "days": 92,
       "enough_days": true,
+      "daylight_hours": 1357,
       "mae_daylight": {
        "gbm": 406.9413354434381,
        "persistence": 953.8924220270874,
        "physics": 493.50680887202907,
-       "physics_calibrated": 527.9680268007976,
-       "elia": 336.70802155490054
+       "physics_calibrated": 527.9680268007976
       },
-      "daylight_hours": {
-       "gbm": 1357,
-       "persistence": 1357,
-       "physics": 1357,
-       "physics_calibrated": 1357,
-       "elia": 1357
+      "elia_subset": {
+       "days": 92,
+       "enough_days": true,
+       "daylight_hours": 1357,
+       "mae_daylight": {
+        "gbm": 406.9413354434381,
+        "persistence": 953.8924220270874,
+        "physics": 493.50680887202907,
+        "physics_calibrated": 527.9680268007976,
+        "elia": 336.70802155490054
+       }
       }
      },
      "JJA": {
       "days": 91,
       "enough_days": true,
+      "daylight_hours": 1496,
       "mae_daylight": {
        "gbm": 394.42520984426227,
        "persistence": 907.0963278743316,
        "physics": 512.5372072656453,
-       "physics_calibrated": 556.7271105330033,
-       "elia": 319.05706634358285
+       "physics_calibrated": 556.7271105330033
       },
-      "daylight_hours": {
-       "gbm": 1496,
-       "persistence": 1496,
-       "physics": 1496,
-       "physics_calibrated": 1496,
-       "elia": 1496
+      "elia_subset": {
+       "days": 91,
+       "enough_days": true,
+       "daylight_hours": 1496,
+       "mae_daylight": {
+        "gbm": 394.42520984426227,
+        "persistence": 907.0963278743316,
+        "physics": 512.5372072656453,
+        "physics_calibrated": 556.7271105330033,
+        "elia": 319.05706634358285
+       }
       }
      }
     },
@@ -454,55 +484,70 @@
      "overcast": {
       "days": 184,
       "enough_days": true,
+      "daylight_hours": 2270,
       "mae_daylight": {
        "gbm": 372.225291128921,
        "persistence": 888.5209903483467,
        "physics": 560.1780165218081,
-       "physics_calibrated": 436.9036153244229,
-       "elia": 315.42307136563875
+       "physics_calibrated": 436.9036153244229
       },
-      "daylight_hours": {
-       "gbm": 2270,
-       "persistence": 2270,
-       "physics": 2270,
-       "physics_calibrated": 2270,
-       "elia": 2270
+      "elia_subset": {
+       "days": 184,
+       "enough_days": true,
+       "daylight_hours": 2270,
+       "mae_daylight": {
+        "gbm": 372.225291128921,
+        "persistence": 888.5209903483467,
+        "physics": 560.1780165218081,
+        "physics_calibrated": 436.9036153244229,
+        "elia": 315.42307136563875
+       }
       }
      },
      "mixed": {
       "days": 116,
       "enough_days": true,
+      "daylight_hours": 1629,
       "mae_daylight": {
        "gbm": 459.6507325842845,
        "persistence": 939.7569115214282,
        "physics": 707.8368662528361,
-       "physics_calibrated": 603.648493046953,
-       "elia": 353.67896950840077
+       "physics_calibrated": 603.648493046953
       },
-      "daylight_hours": {
-       "gbm": 1629,
-       "persistence": 1629,
-       "physics": 1629,
-       "physics_calibrated": 1629,
-       "elia": 1607
+      "elia_subset": {
+       "days": 114,
+       "enough_days": true,
+       "daylight_hours": 1607,
+       "mae_daylight": {
+        "gbm": 460.16142390045223,
+        "persistence": 939.5731433530844,
+        "physics": 701.7955662769856,
+        "physics_calibrated": 603.98644277011,
+        "elia": 353.67896950840077
+       }
       }
      },
      "clear": {
       "days": 64,
       "enough_days": true,
+      "daylight_hours": 908,
       "mae_daylight": {
        "gbm": 314.34164616556023,
        "persistence": 845.435329439438,
        "physics": 518.2774495577971,
-       "physics_calibrated": 667.8362019237329,
-       "elia": 241.75148730248304
+       "physics_calibrated": 667.8362019237329
       },
-      "daylight_hours": {
-       "gbm": 908,
-       "persistence": 908,
-       "physics": 908,
-       "physics_calibrated": 908,
-       "elia": 886
+      "elia_subset": {
+       "days": 62,
+       "enough_days": true,
+       "daylight_hours": 886,
+       "mae_daylight": {
+        "gbm": 318.7896440857023,
+        "persistence": 843.0417737020316,
+        "physics": 503.8009029703466,
+        "physics_calibrated": 672.0327448969014,
+        "elia": 241.75148730248304
+       }
       }
      }
     }
@@ -822,37 +867,47 @@
      "before 2026-10-26 (ods032)": {
       "days": 359,
       "enough_days": true,
+      "daylight_hours": 4758,
       "mae_daylight": {
        "gbm": 376.4039330322507,
        "persistence": 894.0922880117205,
        "physics": 598.2471809230049,
-       "physics_calibrated": 537.5120647076219,
-       "elia": 301.7464964796133
+       "physics_calibrated": 537.5120647076219
       },
-      "daylight_hours": {
-       "gbm": 4758,
-       "persistence": 4758,
-       "physics": 4758,
-       "physics_calibrated": 4758,
-       "elia": 4758
+      "elia_subset": {
+       "days": 359,
+       "enough_days": true,
+       "daylight_hours": 4758,
+       "mae_daylight": {
+        "gbm": 376.4039330322507,
+        "persistence": 894.0922880117205,
+        "physics": 598.2471809230049,
+        "physics_calibrated": 537.5120647076219,
+        "elia": 301.7464964796133
+       }
       }
      },
      "from 2026-10-26 (ods209)": {
       "days": 6,
       "enough_days": false,
+      "daylight_hours": 66,
       "mae_daylight": {
        "gbm": 344.0566335787674,
        "persistence": 955.9685716726841,
        "physics": 974.1563729563203,
-       "physics_calibrated": 572.516631563872,
-       "elia": 254.78856060606063
+       "physics_calibrated": 572.516631563872
       },
-      "daylight_hours": {
-       "gbm": 66,
-       "persistence": 66,
-       "physics": 66,
-       "physics_calibrated": 66,
-       "elia": 33
+      "elia_subset": {
+       "days": 3,
+       "enough_days": false,
+       "daylight_hours": 33,
+       "mae_daylight": {
+        "gbm": 330.12991632213493,
+        "persistence": 1110.8748666481033,
+        "physics": 804.4066798826941,
+        "physics_calibrated": 518.3878011233114,
+        "elia": 254.78856060606063
+       }
       }
      }
     },
@@ -860,73 +915,93 @@
      "SON": {
       "days": 91,
       "enough_days": true,
+      "daylight_hours": 1066,
       "mae_daylight": {
        "gbm": 362.17156391152344,
        "persistence": 973.817284429806,
        "physics": 718.0808976414281,
-       "physics_calibrated": 487.0417449322558,
-       "elia": 297.95958446272994
+       "physics_calibrated": 487.0417449322558
       },
-      "daylight_hours": {
-       "gbm": 1066,
-       "persistence": 1066,
-       "physics": 1066,
-       "physics_calibrated": 1066,
-       "elia": 1033
+      "elia_subset": {
+       "days": 88,
+       "enough_days": true,
+       "daylight_hours": 1033,
+       "mae_daylight": {
+        "gbm": 362.30535968259034,
+        "persistence": 979.3360794493353,
+        "physics": 704.4775766764512,
+        "physics_calibrated": 482.58199404805265,
+        "elia": 297.95958446272994
+       }
       }
      },
      "DJF": {
       "days": 90,
       "enough_days": true,
+      "daylight_hours": 888,
       "mae_daylight": {
        "gbm": 349.5562040190695,
        "persistence": 704.8700311905769,
        "physics": 811.5434133259023,
-       "physics_calibrated": 589.2885311821493,
-       "elia": 273.65840033783786
+       "physics_calibrated": 589.2885311821493
       },
-      "daylight_hours": {
-       "gbm": 888,
-       "persistence": 888,
-       "physics": 888,
-       "physics_calibrated": 888,
-       "elia": 888
+      "elia_subset": {
+       "days": 90,
+       "enough_days": true,
+       "daylight_hours": 888,
+       "mae_daylight": {
+        "gbm": 349.5562040190695,
+        "persistence": 704.8700311905769,
+        "physics": 811.5434133259023,
+        "physics_calibrated": 589.2885311821493,
+        "elia": 273.65840033783786
+       }
       }
      },
      "MAM": {
       "days": 92,
       "enough_days": true,
+      "daylight_hours": 1357,
       "mae_daylight": {
        "gbm": 406.9378690544719,
        "persistence": 953.8924220270874,
        "physics": 487.2736524841969,
-       "physics_calibrated": 526.3338131527163,
-       "elia": 330.5412229182019
+       "physics_calibrated": 526.3338131527163
       },
-      "daylight_hours": {
-       "gbm": 1357,
-       "persistence": 1357,
-       "physics": 1357,
-       "physics_calibrated": 1357,
-       "elia": 1357
+      "elia_subset": {
+       "days": 92,
+       "enough_days": true,
+       "daylight_hours": 1357,
+       "mae_daylight": {
+        "gbm": 406.9378690544719,
+        "persistence": 953.8924220270874,
+        "physics": 487.2736524841969,
+        "physics_calibrated": 526.3338131527163,
+        "elia": 330.5412229182019
+       }
       }
      },
      "JJA": {
       "days": 92,
       "enough_days": true,
+      "daylight_hours": 1513,
       "mae_daylight": {
        "gbm": 373.3920466477933,
        "persistence": 898.0430948446796,
        "physics": 504.55999544385685,
-       "physics_calibrated": 554.235823745083,
-       "elia": 293.96728552544613
+       "physics_calibrated": 554.235823745083
       },
-      "daylight_hours": {
-       "gbm": 1513,
-       "persistence": 1513,
-       "physics": 1513,
-       "physics_calibrated": 1513,
-       "elia": 1513
+      "elia_subset": {
+       "days": 92,
+       "enough_days": true,
+       "daylight_hours": 1513,
+       "mae_daylight": {
+        "gbm": 373.3920466477933,
+        "persistence": 898.0430948446796,
+        "physics": 504.55999544385685,
+        "physics_calibrated": 554.235823745083,
+        "elia": 293.96728552544613
+       }
       }
      }
     },
@@ -934,61 +1009,78 @@
      "overcast": {
       "days": 180,
       "enough_days": true,
+      "daylight_hours": 2216,
       "mae_daylight": {
        "gbm": 370.87536633622204,
        "persistence": 884.5900156095429,
        "physics": 569.8878507870867,
-       "physics_calibrated": 444.2851351649734,
-       "elia": 310.51223262635375
+       "physics_calibrated": 444.2851351649734
       },
-      "daylight_hours": {
-       "gbm": 2216,
-       "persistence": 2216,
-       "physics": 2216,
-       "physics_calibrated": 2216,
-       "elia": 2216
+      "elia_subset": {
+       "days": 180,
+       "enough_days": true,
+       "daylight_hours": 2216,
+       "mae_daylight": {
+        "gbm": 370.87536633622204,
+        "persistence": 884.5900156095429,
+        "physics": 569.8878507870867,
+        "physics_calibrated": 444.2851351649734,
+        "elia": 310.51223262635375
+       }
       }
      },
      "mixed": {
       "days": 125,
       "enough_days": true,
+      "daylight_hours": 1743,
       "mae_daylight": {
        "gbm": 428.34600414143176,
        "persistence": 952.886466361679,
        "physics": 714.9642393287177,
-       "physics_calibrated": 588.5088452129393,
-       "elia": 336.66597776821567
+       "physics_calibrated": 588.5088452129393
       },
-      "daylight_hours": {
-       "gbm": 1743,
-       "persistence": 1743,
-       "physics": 1743,
-       "physics_calibrated": 1743,
-       "elia": 1743
+      "elia_subset": {
+       "days": 125,
+       "enough_days": true,
+       "daylight_hours": 1743,
+       "mae_daylight": {
+        "gbm": 428.34600414143176,
+        "persistence": 952.886466361679,
+        "physics": 714.9642393287177,
+        "physics_calibrated": 588.5088452129393,
+        "elia": 336.66597776821567
+       }
       }
      },
      "clear": {
       "days": 60,
       "enough_days": true,
+      "daylight_hours": 865,
       "mae_daylight": {
        "gbm": 283.43439787753033,
        "persistence": 804.6849094000113,
        "physics": 464.39336526316197,
-       "physics_calibrated": 676.2563292836368,
-       "elia": 203.38214663461537
+       "physics_calibrated": 676.2563292836368
       },
-      "daylight_hours": {
-       "gbm": 865,
-       "persistence": 865,
-       "physics": 865,
-       "physics_calibrated": 865,
-       "elia": 832
+      "elia_subset": {
+       "days": 57,
+       "enough_days": true,
+       "daylight_hours": 832,
+       "mae_daylight": {
+        "gbm": 280.47752834915326,
+        "persistence": 804.8285955528846,
+        "physics": 437.44153939140244,
+        "physics_calibrated": 678.2240680098554,
+        "elia": 203.38214663461537
+       }
       }
      }
     }
    }
   }
  },
+ "recomputed_at": "2026-11-05T10:41:59.581716+00:00",
+ "first_run_code_commit": "98ff6f7dcaef83497e9fa416a770c3f4618fd6a1",
  "artifact": {
   "dir": "artifacts/belgium",
   "model_sha256": "85776a72578cd33a5569e195d874f83999ef0ed864ef58ecfb063af4159c0f99",

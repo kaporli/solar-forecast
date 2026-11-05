@@ -26,12 +26,17 @@ separate installation-level experiment; its results do not validate the Belgian 
    library versions, the dataset, the protocol or a recipe has changed, if the code is uncommitted, or if results
    already exist. A disappointing result is reported as it is; nothing is tuned, switched or rerun against the
    test. `--rehearse <dir>` runs the same code on the last validation fold, which reproduces that fold's recorded
-   scores. Results: `docs/evaluation/belgium-test.md` and `data/evaluation/belgium-test.json`.
+   scores. `--recompute` regenerates the report and artifact manifest after a reporting change; it writes nothing
+   unless every recorded metric and the model checksum come out identical. Results:
+   `docs/evaluation/belgium-test.md` and `data/evaluation/belgium-test.json`. Slices are reported twice: the fitted
+   models and baselines on every scored hour, and every model with Elia on the hours that have an Elia forecast.
 5. **Artifact** (`artifacts/belgium/`, written by the same run from the same fit): `model.joblib`, `manifest.json`
    (input schema and feature version, recipe, seed, output clipping, training window, code commit, lock, dataset,
    protocol, `uv.lock` and library versions, checksums) and `fixtures.parquet` (feature rows of three test days,
    including the 25-hour day of 2026-10-25, with the predictions of the scored run). `solar_forecast.artifact`
-   loads it, refusing a changed checksum or other library versions, and predicts with the output clipping;
+   loads it, refusing a changed model checksum, changed prediction code (SHA-256 of `models.py` and `artifact.py`,
+   which the pickled model runs) or other library versions. `predict` has no fallback: it raises on a missing,
+   non-numeric or non-finite input, a capacity that is not positive, or a non-finite prediction, then clips;
    `tests/test_final_test.py` checks reload parity on the fixtures. The fixtures start from feature rows: parity
    of feature construction from live inputs belongs to #6.
 
