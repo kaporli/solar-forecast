@@ -8,6 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # the final-test drift check diffs against the lock's code commit
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --locked
       - run: uv run pytest -q

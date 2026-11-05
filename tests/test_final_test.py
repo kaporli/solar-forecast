@@ -53,3 +53,35 @@ def test_artifact_refuses_a_changed_model_or_missing_inputs(tmp_path):
     (tmp_path / "a/manifest.json").write_text(json.dumps(man))
     with pytest.raises(ValueError, match="checksum"):
         A.load(tmp_path / "a")
+
+
+@needs_artifact
+@pytest.mark.parametrize("change,match", [
+    (dict(capacity=-1.0), "positive"), (dict(capacity=float("nan")), "non-finite inputs"),
+    (dict(cloud_cover=float("inf")), "non-finite inputs"), (dict(cloud_cover="x"), "non-numeric")])
+def test_artifact_rejects_inputs_outside_the_contract(change, match):
+    model, man = A.load(ART)
+    fx = pd.read_parquet(ART / "fixtures.parquet")
+    with pytest.raises(ValueError, match=match):
+        A.predict(model, man, fx.assign(**change))
+
+
+@needs_artifact
+def test_artifact_refuses_changed_prediction_code(monkeypatch):
+    monkeypatch.setattr(A, "implementation", lambda: {"models.py": "0" * 64, "artifact.py": "0" * 64})
+    with pytest.raises(ValueError, match="prediction code"):
+        A.load(ART)
+
+
+def test_elia_slices_compare_every_model_on_the_same_hours():
+    from test_models import _ex
+
+    ex = _ex(days=40, start="2026-01-01").assign(cloud_cover=50.0)
+    pred = lambda f: ex.assign(prediction=ex["actual"] * f)
+    r = {"gbm": pred(1.1), "persistence": pred(1.5), "elia": pred(0.9)}
+    r["elia"].loc[r["elia"]["target_date"] < pd.Timestamp("2026-01-05").date(), "prediction"] = float("nan")
+    s = T.slices(r, ["before 2026-10-26 (ods032)", "from 2026-10-26 (ods209)"])["source"]["before 2026-10-26 (ods032)"]
+    assert (s["days"], s["elia_subset"]["days"]) == (40, 36)
+    assert s["elia_subset"]["daylight_hours"] == 36 * 12 < s["daylight_hours"]
+    sub = r["gbm"][r["gbm"]["target_date"] >= pd.Timestamp("2026-01-05").date()]
+    assert s["elia_subset"]["mae_daylight"]["gbm"] == pytest.approx((sub["prediction"] - sub["actual"]).abs().mean())

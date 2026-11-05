@@ -6,7 +6,9 @@ Before scoring it checks that nothing the comparison evaluated has changed since
 lock's code commit, uv.lock, Python and library versions, the dataset manifest, the protocol and the recipes. New
 modules (this one, `artifact`) are allowed; they are not used by the locked candidates. It refuses to run a second
 time once results exist. `--rehearse <dir>` runs the same code on the last validation fold into <dir>, without
-touching the test period or the once-only guard."""
+touching the test period or the once-only guard. `--recompute` reruns the recorded test to regenerate the report
+and artifact manifest after a reporting change: it writes nothing unless every recorded metric and the model
+checksum come out identical, so it cannot change a test result."""
 from __future__ import annotations
 
 import argparse
@@ -62,13 +64,17 @@ def build(rec: dict):
     return c
 
 
-def run(name: str, rehearse: Path | None = None) -> dict:
+def run(name: str, rehearse: Path | None = None, recompute: bool = False) -> dict:
     lock = json.loads((ROOT / f"config/lock-{name}.json").read_text())
     out_json, out_md = ROOT / f"data/evaluation/{name}-test.json", ROOT / f"docs/evaluation/{name}-test.md"
     art_dir = A.directory(name)
     if rehearse:
         rehearse.mkdir(parents=True, exist_ok=True)
         out_json, out_md, art_dir = rehearse / out_json.name, rehearse / out_md.name, rehearse / "artifact"
+    elif recompute:
+        if not out_json.exists():
+            raise SystemExit("nothing to recompute: the final test has not run")
+        recorded = json.loads(out_json.read_text())
     elif out_json.exists():
         raise SystemExit(f"{out_json.relative_to(ROOT)} exists: the final test runs once")
     elif _git("status", "--porcelain", "src", "config"):
@@ -111,6 +117,18 @@ def run(name: str, rehearse: Path | None = None) -> dict:
                           .assign(e=lambda d: d["prediction"] - d["actual"]).groupby("lead_hours")} for c, v in r.items()},
              "slices": slices(r, lock["final_test"]["slices"])}
         res["results"][kind] = k
+    if recompute:
+        same = lambda k: json.loads(json.dumps({x: res["results"][x][k] for x in res["results"]}, default=str)) == {
+            x: recorded["results"][x][k] for x in recorded["results"]}
+        buf = io.BytesIO()
+        joblib.dump(sel, buf)
+        differs = [k for k in ("all", "elia_subset", "difference", "lead", "elia_missing_scored_hours") if not same(k)]
+        if hashlib.sha256(buf.getvalue()).hexdigest() != recorded["artifact"]["model_sha256"]:
+            differs.append("model checksum")
+        if differs:
+            raise SystemExit(f"recomputed test differs from the recorded run ({', '.join(differs)}); nothing written")
+        res["run_at"], res["recomputed_at"] = recorded["run_at"], datetime.now(timezone.utc).isoformat()
+        res["first_run_code_commit"] = recorded["code_commit"]
     res["artifact"] = package(name, sel, lock, rows[sel.name], ex, art_dir, rehearse)
     out_json.write_text(json.dumps(res, indent=1, default=str) + "\n")
     validation = json.loads((ROOT / lock["references"]["comparison"]["file"]).read_text())
@@ -119,22 +137,30 @@ def run(name: str, rehearse: Path | None = None) -> dict:
 
 
 def slices(r: dict, source_slices: list[str]) -> dict:
-    """Daylight MAE per slice of the protocol (season, forecast sky class) and the lock's target-source slices.
-    Slices with fewer days than `scoring.slices.min_days` are reported with their counts but marked."""
-    base = next(iter(r.values()))
+    """Daylight MAE per slice of the protocol (season, forecast sky class) and the lock's target-source slices: the
+    fitted models and baselines on every scored hour of the slice, and every model with Elia on the slice's hours
+    that have an Elia forecast. Slices with fewer days than `scoring.slices.min_days` are marked."""
+    base, elia = r["persistence"], r["elia"]
     cut = pd.Timestamp(source_slices[1].split()[1]).date()  # "from 2026-10-26 (ods209)"
     keys = {"source": pd.Series(np.where(base["target_date"] < cut, source_slices[0], source_slices[1]), index=base.index),
             "season": base["target_date"].map(E.season), "sky": E.sky(base)}
+    days = lambda idx: int(base.loc[idx].loc[base.loc[idx, "scored"], "target_date"].nunique())
+    enough = lambda n: n >= E.CONFIG["scoring"]["slices"]["min_days"]
     out = {}
     for dim, key in keys.items():
         out[dim] = {}
         for val in key.dropna().unique():
             idx = key.index[key == val]
-            m = {c: E.metrics(v.loc[idx][v.loc[idx]["prediction"].notna()]) for c, v in r.items()}
-            days = int(base.loc[idx].loc[base.loc[idx, "scored"], "target_date"].nunique())
-            out[dim][str(val)] = {"days": days, "enough_days": days >= E.CONFIG["scoring"]["slices"]["min_days"],
-                                  "mae_daylight": {c: v["mae_daylight"] for c, v in m.items()},
-                                  "daylight_hours": {c: v["daylight_hours"] for c, v in m.items()}}
+            sub = idx[elia.loc[idx, "prediction"].notna().to_numpy()]
+            full = {c: E.metrics(v.loc[idx]) for c, v in r.items() if c != "elia"}
+            shared = {c: E.metrics(v.loc[sub]) for c, v in r.items()}
+            out[dim][str(val)] = {
+                "days": days(idx), "enough_days": enough(days(idx)),
+                "daylight_hours": full["persistence"]["daylight_hours"],
+                "mae_daylight": {c: m["mae_daylight"] for c, m in full.items()},
+                "elia_subset": {"days": days(sub), "enough_days": enough(days(sub)),
+                                "daylight_hours": shared["elia"]["daylight_hours"],
+                                "mae_daylight": {c: m["mae_daylight"] for c, m in shared.items()}}}
     return out
 
 
@@ -164,6 +190,7 @@ def package(name: str, model, lock: dict, scored: pd.DataFrame, ex: pd.DataFrame
                          "rows": int(len(E.training_rows(ex, E.folds(name, include_test=not rehearse)[-1])))},
            "code_commit": _git("rev-parse", "HEAD"), "lock_sha256": _sha(ROOT / f"config/lock-{name}.json"),
            "dataset_manifest": lock["references"]["dataset_manifest"], "protocol": lock["references"]["protocol"],
+           "implementation_sha256": A.implementation(),
            "uv_lock_sha256": fp["uv_lock_sha256"], "python": fp["python"], "versions": fp["versions"],
            "fixtures": {"file": "fixtures.parquet", "sha256": _sha(path / "fixtures.parquet"), "rows": int(len(fixtures)),
                         "target_days": [str(d) for d in days]}}
@@ -188,7 +215,9 @@ def report(exp: F.Experiment, res: dict, lock: dict, val: dict) -> str:
     L = [f"# {title}: {exp.name}", "",
          f"Generated by `{res['command']}`; do not edit by hand. Code {res['code_commit'][:7]}"
          f"{' (uncommitted changes)' if res['code_dirty'] else ''}, lock sha256 {res['lock']['sha256'][:12]}, run "
-         f"{res['run_at'][:10]}. Unit: {u} per hour.", "",
+         f"{res['run_at'][:10]}"
+         + (f" (report recomputed {res['recomputed_at'][:10]} from identical predictions)" if res.get("recomputed_at") else "")
+         + f". Unit: {u} per hour.", "",
          f"Period {per['start']} to {per['end']}: {sp['scored_hours']} scored hours over both kinds, "
          f"{sp['rows_on_hindcast_runs']} rows on hindcast runs. Run once, as locked: `{s}` and `physics_calibrated` "
          f"fitted once on target days {lock['refit_recipe']['first_target']} to {per['train_last_target']}, no refit "
@@ -210,12 +239,24 @@ def report(exp: F.Experiment, res: dict, lock: dict, val: dict) -> str:
               "| Model | Daylight MAE | Daylight bias | Daily MAE |", "| --- | --- | --- | --- |"]
         L += [f"| {c} | {_f(m['mae_daylight'])} | {_f(m['bias_daylight'])} | {_f(m['daily_mae'])} |"
               for c, m in k["elia_subset"].items()]
-        L += ["", "Daylight MAE by slice (slices under 14 days are listed but not interpreted):", "",
-              "| Slice | Days | " + " | ".join(k["all"]) + " | elia |", "| --- | --- |" + " --- |" * (len(k["all"]) + 1)]
+        models = list(k["all"])
+        L += ["", "Daylight MAE by slice, every scored hour of the slice (slices under 14 days are listed but not "
+              "interpreted):", "", "| Slice | Days | Daylight hours | " + " | ".join(models) + " |",
+              "| --- | --- | --- |" + " --- |" * len(models)]
         for dim, vals in k["slices"].items():
             for v, m in sorted(vals.items()):
                 mark = "" if m["enough_days"] else " (under 14 days)"
-                L.append(f"| {dim}: {v}{mark} | {m['days']} | " + " | ".join(_f(m["mae_daylight"][c]) for c in list(k["all"]) + ["elia"]) + " |")
+                L.append(f"| {dim}: {v}{mark} | {m['days']} | {m['daylight_hours']} | "
+                         + " | ".join(_f(m["mae_daylight"][c]) for c in models) + " |")
+        L += ["", "The same slices restricted to hours with an Elia forecast, every model on the same hours:", "",
+              "| Slice | Days | Daylight hours | " + " | ".join(models) + " | elia |",
+              "| --- | --- | --- |" + " --- |" * (len(models) + 1)]
+        for dim, vals in k["slices"].items():
+            for v, m in sorted(vals.items()):
+                e = m["elia_subset"]
+                mark = "" if e["enough_days"] else " (under 14 days)"
+                L.append(f"| {dim}: {v}{mark} | {e['days']} | {e['daylight_hours']} | "
+                         + " | ".join(_f(e["mae_daylight"][c]) for c in models + ["elia"]) + " |")
         L.append("")
     vp = val["results"][primary]["pooled"]
     L += ["## Validation and test, primary kind", "",
@@ -246,8 +287,9 @@ def main(argv=None) -> None:
     ap = argparse.ArgumentParser(prog="python -m solar_forecast.final_test")
     ap.add_argument("experiment", choices=["belgium"])
     ap.add_argument("--rehearse", type=Path, help="run on the last validation fold into this directory")
+    ap.add_argument("--recompute", action="store_true", help="regenerate report and manifest; refuses if any result differs")
     a = ap.parse_args(argv)
-    res = run(a.experiment, a.rehearse)
+    res = run(a.experiment, a.rehearse, a.recompute)
     print(json.dumps({k: {c: m["mae_daylight"] for c, m in v["all"].items()} for k, v in res["results"].items()}, indent=1))
 
 
