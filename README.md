@@ -12,6 +12,7 @@ Hourly forecasts of Belgian aggregate solar production (Elia, "measured and upsc
   `solar-data compare`.
 - `docs/model-selection.md`: candidates, the lock and the final-test procedure.
 - `docs/evaluation/belgium-test.md`: the final test of the locked selection, run once.
+- `docs/deployment.md`: runtime and measurements on the deployment worker.
 - `artifacts/belgium/`: the deployment model, its manifest and parity fixtures (`solar_forecast.artifact`).
 - `legacy/`: the 2024 student project, kept as it was.
 
