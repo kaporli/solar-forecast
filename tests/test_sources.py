@@ -174,3 +174,19 @@ def test_fresh_pvdaq_download_is_checked_against_the_manifest(tmp_path, monkeypa
     monkeypatch.setattr(sources, "get", lambda url: b"changed upstream")
     with pytest.raises(ValueError, match="changed upstream"):
         sources.fetch_pvdaq(manifest, store)
+
+
+def test_an_incomplete_weather_response_is_kept_and_fetched_again(tmp_path, monkeypatch):
+    run = pd.Timestamp("2026-11-06", tz="UTC")
+    bodies = [run_json(run, hours=24), run_json(run, hours=sources.LIVE_HOURS)]
+    calls = []
+    monkeypatch.setattr(sources, "get", lambda url: calls.append(url) or bodies[len(calls) - 1])
+    now = run + pd.Timedelta(hours=4)
+    sources.fetch_new_runs("belgium", now, hours=(0,), store=tmp_path)
+    [short] = sources.snapshots("weather-belgium", tmp_path)
+    assert not sources.run_complete(short, "belgium")
+    sources.fetch_new_runs("belgium", now, hours=(0,), store=tmp_path)
+    assert len(calls) == 2
+    assert [sources.run_complete(m, "belgium") for m in sources.snapshots("weather-belgium", tmp_path)] == [False, True]
+    sources.fetch_new_runs("belgium", now, hours=(0,), store=tmp_path)
+    assert len(calls) == 2  # a complete run is not fetched again

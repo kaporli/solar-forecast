@@ -4,6 +4,8 @@ import pandas as pd
 import pytest
 
 from solar_forecast import features as F
+from solar_forecast import index, sources
+from solar_forecast import issue as I
 from solar_forecast.issue import issue
 
 from conftest import elia_csv, run_json
@@ -12,11 +14,13 @@ TARGET = "2026-11-07"
 ISSUANCE = F.issuance_time(F.belgium(), TARGET, "11h")  # 2026-11-06 10:00 UTC
 
 
-def live_store(store, runs=("2026-11-06",), elia_retrieved="2026-11-06 09:35Z", hours=72):
-    store("elia", "ods210_total", "csv", elia_csv("2026-10-25", "2026-11-06 09:30"), elia_retrieved, dataset="ods210")
+def live_store(store, runs=("2026-11-06",), elia_retrieved="2026-11-06 09:35Z", hours=72, elia=True):
+    if elia:
+        store("elia", "ods210_total", "csv", elia_csv("2026-10-25", "2026-11-06 09:30"), elia_retrieved, dataset="ods210")
     for day in runs:
         run = pd.Timestamp(day, tz="UTC")
-        store("weather-belgium", run.strftime("%Y%m%dT%H"), "json", run_json(run, hours=hours), f"{day} 08:00Z", run=run.isoformat())
+        store("weather-belgium", run.strftime("%Y%m%dT%H"), "json", run_json(run, hours=hours), f"{day} 08:00Z",
+              run=run.isoformat(), params={"forecast_hours": hours})
 
 
 def go(store, tmp_path, now=ISSUANCE + pd.Timedelta(minutes=1)):
@@ -71,3 +75,83 @@ def test_failure_writes_a_failure_record_and_no_forecast(store, tmp_path):
     assert not (out / f"{TARGET}_11h.json").exists()
     [fail] = list(out.glob(f"{TARGET}_11h.failed-*.json"))
     assert json.loads(fail.read_text())["status"] == "failed"
+
+
+def test_an_interrupted_write_leaves_no_record_and_a_retry_issues(store, tmp_path, monkeypatch):
+    live_store(store)
+    real = I.os.fsync
+    def boom(fd):
+        raise OSError("disk full")
+    monkeypatch.setattr(I.os, "fsync", boom)
+    with pytest.raises(OSError):
+        go(store, tmp_path)
+    monkeypatch.setattr(I.os, "fsync", real)
+    out = tmp_path / "forecasts/belgium"
+    assert not (out / f"{TARGET}_11h.json").exists() and not list(out.glob(".*.tmp"))
+    assert json.loads(go(store, tmp_path).read_text())["status"] == "issued"
+
+
+def test_a_serialization_failure_is_recorded(store, tmp_path, monkeypatch):
+    live_store(store)
+    monkeypatch.setattr(I, "_num", lambda x: float("nan"))  # NaN is not valid JSON
+    with pytest.raises(ValueError, match="JSON"):
+        go(store, tmp_path)
+    out = tmp_path / "forecasts/belgium"
+    assert not (out / f"{TARGET}_11h.json").exists() and len(list(out.glob(f"{TARGET}_11h.failed-*.json"))) == 1
+
+
+def test_features_equal_full_history_when_older_retrievals_hold_values_newer_ones_lack(store, tmp_path):
+    # the review's case: the newest retrievals lack November 2, which only an older one holds, so a three-day
+    # retrieval window falls back to November 1
+    live_store(store, elia=False)
+    store("elia", "ods210_total", "csv", elia_csv("2026-10-25", "2026-11-03", measured=lambda t: 60.0),
+          "2026-11-02 23:00Z", dataset="ods210")
+    store("elia", "ods210_total", "csv", elia_csv("2026-10-25", "2026-11-06 09:30",
+          measured=lambda t: 50.0 if t < pd.Timestamp("2026-11-01 23:00", tz="UTC") else None), "2026-11-06 09:35Z", dataset="ods210")
+    rec = json.loads(go(store, tmp_path).read_text())
+    exp = F.belgium()
+    elia = [m for m in sources.snapshots("elia", store.path) if F._ts(m["retrieved_at"]) <= ISSUANCE]
+    weather = sources.snapshots("weather-belgium", store.path)
+    from solar_forecast.cli import content_hash
+    full = F.features_for_issuance(exp, F.BelgiumInputs(elia, weather, exp), TARGET, "11h", live=True)
+    assert rec["features_sha256"] == content_hash(full)
+    assert any(s["retrieved_at"].startswith("2026-11-02") for s in rec["inputs"]["snapshots"])
+
+
+def test_only_retrievals_reaching_the_window_are_read(store):
+    store("elia", "ods210_total", "csv", elia_csv("2026-09-01", "2026-09-10"), "2026-09-10 00:00Z", dataset="ods210")
+    store("elia", "ods210_total", "csv", elia_csv("2026-10-25", "2026-11-03"), "2026-11-03 00:00Z", dataset="ods210")
+    metas = sources.snapshots("elia", store.path)
+    con = index.connect(index.path_for(metas))
+    assert len(index.reaching(con, metas, "2026-10-26")) == 2  # not indexed yet: both
+    index.ingest(con, metas)
+    assert [m["retrieved_at"][:10] for m in index.reaching(con, metas, "2026-10-26")] == ["2026-11-03"]
+
+
+def test_an_incomplete_prescribed_run_is_not_used(store, tmp_path):
+    live_store(store, runs=("2026-11-05",))
+    run = pd.Timestamp("2026-11-06", tz="UTC")
+    store("weather-belgium", "20261106T00", "json", run_json(run, hours=24), "2026-11-06 08:00Z",
+          run=run.isoformat(), params={"forecast_hours": 72})
+    rec = json.loads(go(store, tmp_path).read_text())
+    assert rec["inputs"]["weather_availability"] == "fallback"
+
+
+def test_a_late_execution_is_not_issued(store, tmp_path):
+    live_store(store)
+    with pytest.raises(I.Late):
+        go(store, tmp_path, now=ISSUANCE + I.LATE + pd.Timedelta(seconds=1))
+    out = tmp_path / "forecasts/belgium"
+    [fail] = list(out.glob(f"{TARGET}_11h.failed-*.json"))
+    assert not (out / f"{TARGET}_11h.json").exists() and json.loads(fail.read_text())["status"] == "late"
+    rec = json.loads(go(store, tmp_path, now=ISSUANCE + I.LATE - pd.Timedelta(minutes=5)).read_text())
+    assert pd.Timestamp(rec["completed_at"]) <= pd.Timestamp(rec["deadline_utc"])
+
+
+def test_failures_in_the_same_second_keep_separate_records(store, tmp_path):
+    live_store(store, runs=())
+    for _ in range(2):
+        with pytest.raises(ValueError):
+            go(store, tmp_path)
+    fails = list((tmp_path / "forecasts/belgium").glob(f"{TARGET}_11h.failed-*.json"))
+    assert len(fails) == 2 and len({json.loads(f.read_text())["attempt"] for f in fails}) == 2

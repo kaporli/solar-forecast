@@ -51,13 +51,23 @@ pipeline, which needs its own resource measurement.
 - **Captures** (`solar-data snapshot`, 10:30, 11:30, 17:30 and 18:30 Europe/Brussels): Elia ods209 (last 14 days)
   and ods210, and today's 00 UTC and 06 UTC weather runs once they are at least three hours old. Live runs are
   fetched with 72 hours instead of the archive's 49, so the previous day's run still covers a target day when
-  the protocol's fallback needs it; values for an hour do not depend on the length.
+  the protocol's fallback needs it; values for an hour do not depend on the length. A run counts as captured only
+  with a complete response (`sources.run_complete`: every point, every requested hour, every variable, nothing
+  missing after the run hour, whose radiation is always empty). An incomplete response is kept and the run is
+  fetched again at the next capture.
 - **Issuance** (`solar-data issue belgium --kind 11h|18h`, one minute after 11:00 and 18:00): only snapshots
-  retrieved by the issuance time count. Elia from the last three days of retrievals, queried from 12 days before
-  the target day; the prescribed run, or the latest earlier run labelled `fallback`. The packaged model
-  predicts; persistence and physics are recorded beside it.
-- **Records:** `data/forecasts/belgium/<target>_<kind>.json`, created exclusively, so a retry cannot replace an
-  issued forecast. Each holds the issuance and computation times, code commit, model checksums, feature version
-  and content hash, the weather run and how it was obtained, capacity, the checksum of every input snapshot, and
-  per hour the forecast, persistence and physics in MWh. A failed attempt writes
-  `<target>_<kind>.failed-<UTC>.json` and no forecast; there is no fallback model.
+  retrieved by the issuance time count. Elia: every retrieval that can hold a quarter-hour from 12 days before the
+  target day (`index.reaching`: not indexed yet, or with an indexed row from then), so the window resolves as over
+  the whole history and older non-null values are kept, while only those retrievals are read and verified.
+  Weather: complete responses of runs from the last three days; the prescribed run, or the latest earlier run
+  labelled `fallback`. The packaged model predicts; persistence and physics are recorded beside it.
+- **Deadline:** an issuance must complete within 30 minutes of its time (`issue.LATE`). A later attempt, for
+  example a persistent timer firing after downtime, is not issued; it leaves a `late` record, so it never enters
+  the on-time evaluation.
+- **Records:** `data/forecasts/belgium/<target>_<kind>.json`. Written to a temporary file, flushed to disk, then
+  linked to its name, which fails if the name exists: a record is complete or absent, and a retry cannot replace
+  it. Each holds the issuance time, deadline, attempt id, start and completion times, code commit, model checksums,
+  feature version and content hash, the weather run and how it was obtained, capacity, the checksum of every input
+  snapshot, and per hour the forecast, persistence and physics in MWh. A failed or late attempt publishes
+  `<target>_<kind>.failed-<attempt>.json` the same way, with status `failed` or `late`, the error and no forecast;
+  the attempt id (start time and a random suffix) keeps every attempt. There is no fallback model.

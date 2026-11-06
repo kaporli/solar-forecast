@@ -246,11 +246,12 @@ def fetch_run(experiment: str, run: pd.Timestamp, store: Path = STORE, hours: in
 
 
 def fetch_new_runs(experiment: str, now, hours=(0, 6), store: Path = STORE) -> list[Path]:
-    """Today's runs at `hours` UTC that are not stored yet and at least three hours old, with `LIVE_HOURS` so they
-    can serve as the protocol's fallback the next day; a run Open-Meteo has not published yet is skipped and tried
-    again at the next capture."""
+    """Today's runs at `hours` UTC without a complete stored response (`run_complete`) and at least three hours old,
+    with `LIVE_HOURS` so they can serve as the protocol's fallback the next day. A run Open-Meteo has not published
+    yet is skipped, and an incomplete response is kept but does not count: both are tried again at the next
+    capture."""
     now = pd.Timestamp(now)
-    have = {pd.Timestamp(m["run"]) for m in snapshots(f"weather-{experiment}", store)}
+    have = {pd.Timestamp(m["run"]) for m in snapshots(f"weather-{experiment}", store) if run_complete(m, experiment)}
     out = []
     for h in hours:
         run = now.normalize() + pd.Timedelta(hours=h)
@@ -261,6 +262,24 @@ def fetch_new_runs(experiment: str, now, hours=(0, 6), store: Path = STORE) -> l
         except (ValueError, urllib.error.HTTPError) as e:
             print("skipped", run, e, flush=True)
     return out
+
+
+def run_complete(meta: dict, experiment: str) -> bool:
+    """A stored run response is usable: it parses, has every point, every hour it requested from the run on and
+    every variable, with no missing value after the run hour (whose radiation, accumulated over the hour before,
+    is always empty). Raises if the payload is missing or changed."""
+    want = weather_params(experiment)
+    points = len(str(want["latitude"]).split(","))
+    hours = meta.get("params", {}).get("forecast_hours", want["forecast_hours"])
+    body = read_verified(meta)
+    try:
+        df = parse_run(body, points)
+    except (ValueError, KeyError, TypeError):
+        return False
+    labels = pd.date_range(pd.Timestamp(meta["run"]), periods=hours, freq="h")
+    after = df[df["time"] > labels[0]] if set(UNITS) <= set(df.columns) else None
+    return (after is not None and after[list(UNITS)].notna().all().all()
+            and all(pd.DatetimeIndex(g["time"]).equals(labels) for _, g in df.groupby("point")))
 
 
 def parse_run(body: bytes, points: int) -> pd.DataFrame:
