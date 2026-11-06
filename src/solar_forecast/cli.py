@@ -248,6 +248,8 @@ def main(argv=None) -> None:
     s = sub.add_parser("issue", help="one live issuance: forecast record under data/forecasts/")
     s.add_argument("experiment", choices=["belgium"])
     s.add_argument("--kind", choices=["11h", "18h"], required=True)
+    s = sub.add_parser("score", help="score issued forecasts against Elia actuals: versions under data/scores/")
+    s.add_argument("experiment", choices=["belgium"])
     a = p.parse_args(argv)
     if a.cmd == "fetch":
         fetch(a.experiment, a.weather_only)
@@ -272,6 +274,10 @@ def main(argv=None) -> None:
     elif a.cmd == "issue":
         from .issue import issue
         print("issued", issue(a.experiment, a.kind))
+    elif a.cmd == "score":
+        from .score import score
+        for p in score(a.experiment):
+            print("scored", p.name)
     else:
         sys.stdout.write(F.contract_markdown())
 
