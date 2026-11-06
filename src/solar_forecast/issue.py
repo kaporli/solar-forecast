@@ -13,8 +13,8 @@ be published within `LATE` of its time, checked after the record is flushed and 
 that commits it; a later one is not issued. Before the commit, a failed or late attempt publishes
 <target>_<kind>.failed-<attempt>.json (status `failed` or `late`, unique attempt id) and no forecast; there is no
 fallback model. After the commit the forecast stands: <target>_<kind>.published.json records the publication
-time and whether the directory sync succeeded (`durable`), and a sync error exits non-zero without a failure
-record. Records hold the code and model identity and a checksum of every input snapshot."""
+time, whether the directory sync succeeded (`durable`) and any error removing the temporary file; either error exits
+non-zero without a failure record. Records hold the code and model identity and a checksum of every input snapshot."""
 from __future__ import annotations
 
 import hashlib
@@ -163,8 +163,9 @@ def issue(name: str, kind: str, target=None, now=None, store: Path = sources.STO
                 os.link(tmp, path)  # the commit: from here the forecast exists
             except FileExistsError:
                 raise SystemExit(f"{path.name} exists: already issued") from None
-        finally:
+        except BaseException:
             tmp.unlink(missing_ok=True)
+            raise
     except Exception as e:
         fail = path.with_name(f"{path.stem}.failed-{attempt}.json")
         publish(fail, json.dumps(base | {"status": "late" if isinstance(e, Late) else "failed",
@@ -172,16 +173,21 @@ def issue(name: str, kind: str, target=None, now=None, store: Path = sources.STO
                                          "traceback": traceback.format_exc(limit=5)}, indent=1) + "\n")
         raise
     # committed: later errors never produce a failure record; they are reported in the publication record
-    sync_error = None
+    sync_error = cleanup_error = None
+    try:
+        tmp.unlink()
+    except OSError as e:
+        cleanup_error = f"{type(e).__name__}: {e}"
     try:
         _sync_dir(path.parent)
     except OSError as e:
         sync_error = f"{type(e).__name__}: {e}"
     publish(path.with_name(f"{path.stem}.published.json"),
             json.dumps({"attempt": attempt, "published_at": published.isoformat(), "deadline_utc": deadline.isoformat(),
-                        "durable": sync_error is None, "sync_error": sync_error}, indent=1) + "\n")
-    if sync_error:
-        raise SystemExit(f"{path.name} published, but its directory was not synced: {sync_error}")
+                        "durable": sync_error is None, "sync_error": sync_error, "cleanup_error": cleanup_error},
+                       indent=1) + "\n")
+    if sync_error or cleanup_error:
+        raise SystemExit(f"{path.name} published; sync error: {sync_error}; cleanup error: {cleanup_error}")
     return path
 
 

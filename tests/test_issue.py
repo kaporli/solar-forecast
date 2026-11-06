@@ -191,10 +191,27 @@ def test_a_sync_failure_after_the_commit_keeps_the_forecast(store, tmp_path, mon
             raise OSError("sync failed")
         real(d)
     monkeypatch.setattr(I, "_sync_dir", once)
-    with pytest.raises(SystemExit, match="not synced"):
+    with pytest.raises(SystemExit, match="sync error: OSError"):
         go(store, tmp_path)
     out = tmp_path / "forecasts/belgium"
     assert json.loads((out / f"{TARGET}_11h.json").read_text())["status"] == "issued"
     assert not list(out.glob(f"{TARGET}_11h.failed-*.json"))
     pub = json.loads((out / f"{TARGET}_11h.published.json").read_text())
     assert pub["durable"] is False and "sync failed" in pub["sync_error"]
+
+
+def test_a_cleanup_failure_after_the_commit_keeps_the_forecast(store, tmp_path, monkeypatch):
+    live_store(store)
+    real = I.Path.unlink
+    def unlink(self, missing_ok=False):
+        if self.name.startswith(f".{TARGET}_11h.json.") and (self.parent / f"{TARGET}_11h.json").exists():
+            raise OSError("cleanup failed")
+        real(self, missing_ok=missing_ok)
+    monkeypatch.setattr(I.Path, "unlink", unlink)
+    with pytest.raises(SystemExit, match="cleanup error: OSError"):
+        go(store, tmp_path)
+    out = tmp_path / "forecasts/belgium"
+    assert json.loads((out / f"{TARGET}_11h.json").read_text())["status"] == "issued"
+    assert not list(out.glob(f"{TARGET}_11h.failed-*.json"))
+    pub = json.loads((out / f"{TARGET}_11h.published.json").read_text())
+    assert pub["durable"] is True and "cleanup failed" in pub["cleanup_error"]

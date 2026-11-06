@@ -75,6 +75,7 @@ pipeline, which needs its own resource measurement.
   with status `failed` or `late`, the error and no forecast; the attempt id (start time and a random suffix) keeps
   every attempt. There is no fallback model.
 - **After the commit** the forecast stands. `<target>_<kind>.published.json` records the attempt, the publication
-  time (taken immediately before the link) and whether the directory sync succeeded (`durable`, `sync_error`). A
-  sync error exits non-zero and never writes a failure record. If the process stops between the link and this
+  time (taken immediately before the link), whether the directory sync succeeded (`durable`, `sync_error`) and any
+  error removing the temporary file (`cleanup_error`). Either error exits non-zero and never writes a failure
+  record. If the process stops between the link and this
   file, the forecast exists without it: its publication time is then unknown, but no later than the deadline.
