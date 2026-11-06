@@ -9,9 +9,12 @@ weather run, or the latest earlier run labelled `fallback`, counting only comple
 Each issuance is identified by (experiment, kind, target day) and published once to
 data/forecasts/<experiment>/<target>_<kind>.json: written to a temporary file, flushed, then linked to that name,
 which fails if it exists, so a record is complete or absent and a retry cannot replace it. An issuance must
-complete within `LATE` of its time; a later one is not issued. A failed or late attempt publishes
+be published within `LATE` of its time, checked after the record is flushed and immediately before the link
+that commits it; a later one is not issued. Before the commit, a failed or late attempt publishes
 <target>_<kind>.failed-<attempt>.json (status `failed` or `late`, unique attempt id) and no forecast; there is no
-fallback model. Records hold the code and model identity and a checksum of every input snapshot."""
+fallback model. After the commit the forecast stands: <target>_<kind>.published.json records the publication
+time and whether the directory sync succeeded (`durable`), and a sync error exits non-zero without a failure
+record. Records hold the code and model identity and a checksum of every input snapshot."""
 from __future__ import annotations
 
 import hashlib
@@ -46,23 +49,37 @@ def record_path(out: Path, name: str, target, kind: str) -> Path:
     return out / name / f"{target}_{kind}.json"
 
 
-def publish(path: Path, text: str) -> None:
-    """Write `text` to a temporary file and flush it to disk, then link it to `path`. The link fails if `path`
-    exists (FileExistsError), so `path` appears complete or not at all and is never replaced."""
+def _staged(path: Path, text: str) -> Path:
+    """`text` in a temporary file beside `path`, flushed to disk."""
     tmp = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
     try:
         with open(tmp, "x") as fh:
             fh.write(text)
             fh.flush()
             os.fsync(fh.fileno())
-        os.link(tmp, path)
-    finally:
+    except BaseException:
         tmp.unlink(missing_ok=True)
-    fd = os.open(path.parent, os.O_RDONLY)
+        raise
+    return tmp
+
+
+def _sync_dir(d: Path) -> None:
+    fd = os.open(d, os.O_RDONLY)
     try:
         os.fsync(fd)
     finally:
         os.close(fd)
+
+
+def publish(path: Path, text: str) -> None:
+    """Write `text` to a temporary file and flush it to disk, then link it to `path`. The link fails if `path`
+    exists (FileExistsError), so `path` appears complete or not at all and is never replaced."""
+    tmp = _staged(path, text)
+    try:
+        os.link(tmp, path)
+    finally:
+        tmp.unlink(missing_ok=True)
+    _sync_dir(path.parent)
 
 
 def _ref(m: dict) -> dict:
@@ -136,20 +153,35 @@ def issue(name: str, kind: str, target=None, now=None, store: Path = sources.STO
                        "physics_mwh": _num(q)}
                       for (_, r), f, p, q in zip(rows.iterrows(), forecast, persistence, physics)],
         }
-        rec["completed_at"] = completed().isoformat()
-        text = json.dumps(rec, indent=1, allow_nan=False) + "\n"
-        if completed() > deadline:
-            raise Late(f"completed after the deadline {deadline}")
+        rec["computed_at"] = completed().isoformat()
+        tmp = _staged(path, json.dumps(rec, indent=1, allow_nan=False) + "\n")
         try:
-            publish(path, text)
-        except FileExistsError:
-            raise SystemExit(f"{path.name} exists: already issued") from None
+            published = completed()  # after the flush, immediately before the commit
+            if published > deadline:
+                raise Late(f"ready to publish at {published}, after the deadline {deadline}")
+            try:
+                os.link(tmp, path)  # the commit: from here the forecast exists
+            except FileExistsError:
+                raise SystemExit(f"{path.name} exists: already issued") from None
+        finally:
+            tmp.unlink(missing_ok=True)
     except Exception as e:
         fail = path.with_name(f"{path.stem}.failed-{attempt}.json")
         publish(fail, json.dumps(base | {"status": "late" if isinstance(e, Late) else "failed",
-                                         "completed_at": completed().isoformat(), "error": f"{type(e).__name__}: {e}",
+                                         "ended_at": completed().isoformat(), "error": f"{type(e).__name__}: {e}",
                                          "traceback": traceback.format_exc(limit=5)}, indent=1) + "\n")
         raise
+    # committed: later errors never produce a failure record; they are reported in the publication record
+    sync_error = None
+    try:
+        _sync_dir(path.parent)
+    except OSError as e:
+        sync_error = f"{type(e).__name__}: {e}"
+    publish(path.with_name(f"{path.stem}.published.json"),
+            json.dumps({"attempt": attempt, "published_at": published.isoformat(), "deadline_utc": deadline.isoformat(),
+                        "durable": sync_error is None, "sync_error": sync_error}, indent=1) + "\n")
+    if sync_error:
+        raise SystemExit(f"{path.name} published, but its directory was not synced: {sync_error}")
     return path
 
 

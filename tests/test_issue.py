@@ -145,7 +145,7 @@ def test_a_late_execution_is_not_issued(store, tmp_path):
     [fail] = list(out.glob(f"{TARGET}_11h.failed-*.json"))
     assert not (out / f"{TARGET}_11h.json").exists() and json.loads(fail.read_text())["status"] == "late"
     rec = json.loads(go(store, tmp_path, now=ISSUANCE + I.LATE - pd.Timedelta(minutes=5)).read_text())
-    assert pd.Timestamp(rec["completed_at"]) <= pd.Timestamp(rec["deadline_utc"])
+    assert pd.Timestamp(rec["computed_at"]) <= pd.Timestamp(rec["deadline_utc"])
 
 
 def test_failures_in_the_same_second_keep_separate_records(store, tmp_path):
@@ -155,3 +155,46 @@ def test_failures_in_the_same_second_keep_separate_records(store, tmp_path):
             go(store, tmp_path)
     fails = list((tmp_path / "forecasts/belgium").glob(f"{TARGET}_11h.failed-*.json"))
     assert len(fails) == 2 and len({json.loads(f.read_text())["attempt"] for f in fails}) == 2
+
+
+def test_a_slow_flush_past_the_deadline_is_late(store, tmp_path, monkeypatch):
+    live_store(store)
+    clock = [0.0]
+    monkeypatch.setattr(I.time, "monotonic", lambda: clock[0])
+    real = I.os.fsync
+    def slow(fd):
+        clock[0] += 120
+        real(fd)
+    monkeypatch.setattr(I.os, "fsync", slow)
+    with pytest.raises(I.Late, match="ready to publish"):
+        go(store, tmp_path, now=ISSUANCE + I.LATE - pd.Timedelta(seconds=60))
+    out = tmp_path / "forecasts/belgium"
+    [fail] = list(out.glob(f"{TARGET}_11h.failed-*.json"))
+    assert not (out / f"{TARGET}_11h.json").exists() and json.loads(fail.read_text())["status"] == "late"
+
+
+def test_publication_time_is_recorded_after_the_computation(store, tmp_path):
+    live_store(store)
+    p = go(store, tmp_path)
+    pub = json.loads(p.with_name(f"{TARGET}_11h.published.json").read_text())
+    rec = json.loads(p.read_text())
+    assert pub["attempt"] == rec["attempt"] and pub["durable"] is True
+    assert rec["computed_at"] <= pub["published_at"] <= pub["deadline_utc"]
+
+
+def test_a_sync_failure_after_the_commit_keeps_the_forecast(store, tmp_path, monkeypatch):
+    live_store(store)
+    real, calls = I._sync_dir, []
+    def once(d):
+        calls.append(d)
+        if len(calls) == 1:
+            raise OSError("sync failed")
+        real(d)
+    monkeypatch.setattr(I, "_sync_dir", once)
+    with pytest.raises(SystemExit, match="not synced"):
+        go(store, tmp_path)
+    out = tmp_path / "forecasts/belgium"
+    assert json.loads((out / f"{TARGET}_11h.json").read_text())["status"] == "issued"
+    assert not list(out.glob(f"{TARGET}_11h.failed-*.json"))
+    pub = json.loads((out / f"{TARGET}_11h.published.json").read_text())
+    assert pub["durable"] is False and "sync failed" in pub["sync_error"]

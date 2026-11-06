@@ -251,12 +251,12 @@ def fetch_new_runs(experiment: str, now, hours=(0, 6), store: Path = STORE) -> l
     yet is skipped, and an incomplete response is kept but does not count: both are tried again at the next
     capture."""
     now = pd.Timestamp(now)
-    have = {pd.Timestamp(m["run"]) for m in snapshots(f"weather-{experiment}", store) if run_complete(m, experiment)}
+    due = {r for h in hours if (r := now.normalize() + pd.Timedelta(hours=h)) <= now - pd.Timedelta(hours=3)}
+    # only the due runs' payloads are read: the work does not grow with the archive
+    have = {pd.Timestamp(m["run"]) for m in snapshots(f"weather-{experiment}", store)
+            if pd.Timestamp(m["run"]) in due and run_complete(m, experiment)}
     out = []
-    for h in hours:
-        run = now.normalize() + pd.Timedelta(hours=h)
-        if run in have or run > now - pd.Timedelta(hours=3):
-            continue
+    for run in sorted(due - have):
         try:
             out.append(fetch_run(experiment, run, store, LIVE_HOURS))
         except (ValueError, urllib.error.HTTPError) as e:

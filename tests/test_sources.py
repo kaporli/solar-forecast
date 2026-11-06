@@ -190,3 +190,16 @@ def test_an_incomplete_weather_response_is_kept_and_fetched_again(tmp_path, monk
     assert [sources.run_complete(m, "belgium") for m in sources.snapshots("weather-belgium", tmp_path)] == [False, True]
     sources.fetch_new_runs("belgium", now, hours=(0,), store=tmp_path)
     assert len(calls) == 2  # a complete run is not fetched again
+
+
+def test_a_capture_reads_only_the_due_runs(tmp_path, monkeypatch):
+    old = pd.Timestamp("2025-01-15", tz="UTC")
+    sources.save("weather-belgium", "20250115T00", "json", run_json(old), {"retrieved_at": old.isoformat(), "url": "test",
+                 "run": old.isoformat(), "params": {"forecast_hours": 49}}, tmp_path)
+    [m] = sources.snapshots("weather-belgium", tmp_path)
+    m["path"].unlink()  # an unrelated payload is missing
+    run = pd.Timestamp("2026-11-06", tz="UTC")
+    calls = []
+    monkeypatch.setattr(sources, "get", lambda url: calls.append(url) or run_json(run, hours=sources.LIVE_HOURS))
+    sources.fetch_new_runs("belgium", run + pd.Timedelta(hours=4), hours=(0,), store=tmp_path)
+    assert len(calls) == 1
