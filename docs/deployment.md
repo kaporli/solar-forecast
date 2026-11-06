@@ -79,3 +79,26 @@ pipeline, which needs its own resource measurement.
   error removing the temporary file (`cleanup_error`). Either error exits non-zero and never writes a failure
   record. If the process stops between the link and this
   file, the forecast exists without it: its publication time is then unknown, but no later than the deadline.
+
+## Scoring
+
+`solar-data score belgium` (`score.py`) scores every issued record whose target day has started and that has no
+final score yet. It applies the scoring policy above.
+
+- **Actuals:** Elia "measured and upscaled" Belgium Total, MWh per hour from the four quarter-hours
+  (`targets.belgium_target`, the same exclusions as the backtest). Provisional scores resolve every retrieval
+  stored so far (ods209 before ods210, newest non-null). The final score uses only the first ods209 retrieval made
+  at least seven days after the target day ends in Europe/Brussels that requested that day. A final score is not
+  rescored.
+- **Versions:** `data/scores/belgium/<target>_<kind>.v<N>.json`, published exclusively like the forecast records.
+  A new version is written only when the status or the per-hour actuals or benchmark change. Each references the
+  forecast record (file, checksum, attempt, model), the retrievals the actuals came from, and the previous
+  version's content hash.
+- **Coverage:** observed and scored hours, the unscored hours, and whether the day is complete. An hour is scored
+  when all four quarter-hours are present, it has no exclusion and the forecast is finite. Missing hours stay
+  missing. Daily totals need a complete day.
+- **Metrics:** the hourly metrics of the backtest (`evaluation.metrics`) for the forecast, persistence and physics
+  on the scored hours. The Elia benchmark of the kind (`dayahead11hforecast` for 11:00, `dayaheadforecast` for
+  18:00) is scored as published, on the scored hours where Elia has a value.
+- **Summary:** `data/scores/belgium/summary.json`, replaced atomically on each run. It pools the latest version of
+  each issuance by kind, once over all scores and once over final scores only.
