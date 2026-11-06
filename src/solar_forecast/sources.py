@@ -230,12 +230,56 @@ def check_run_body(body: bytes) -> None:
         raise ValueError(j.get("reason"))
 
 
-def fetch_run(experiment: str, run: pd.Timestamp, store: Path = STORE) -> Path:
+LIVE_HOURS = 72  # live runs: the previous day's 00 UTC run still covers a target day (offsets 47 to 70 h)
+
+
+def fetch_run(experiment: str, run: pd.Timestamp, store: Path = STORE, hours: int | None = None) -> Path:
+    """`hours`: forecast length, by default the archive's (`weather_params`). Values for a given hour do not depend
+    on it, so a longer live run gives the same features for the hours both cover."""
     params = {"models": "ecmwf_ifs", "timezone": "UTC", "wind_speed_unit": "ms", "hourly": HOURLY,
               **weather_params(experiment), "run": run.strftime("%Y-%m-%dT%H:%M")}
+    if hours:
+        params["forecast_hours"] = hours
     url = f"{SINGLE_RUNS}?{urllib.parse.urlencode(params, safe=',')}"
     return fetch(f"weather-{experiment}", run.strftime("%Y%m%dT%H"), "json", url,
                  {"run": run.isoformat(), "params": params}, check=check_run_body, store=store)
+
+
+def fetch_new_runs(experiment: str, now, hours=(0, 6), store: Path = STORE) -> list[Path]:
+    """Today's runs at `hours` UTC without a complete stored response (`run_complete`) and at least three hours old,
+    with `LIVE_HOURS` so they can serve as the protocol's fallback the next day. A run Open-Meteo has not published
+    yet is skipped, and an incomplete response is kept but does not count: both are tried again at the next
+    capture."""
+    now = pd.Timestamp(now)
+    due = {r for h in hours if (r := now.normalize() + pd.Timedelta(hours=h)) <= now - pd.Timedelta(hours=3)}
+    # only the due runs' payloads are read: the work does not grow with the archive
+    have = {pd.Timestamp(m["run"]) for m in snapshots(f"weather-{experiment}", store)
+            if pd.Timestamp(m["run"]) in due and run_complete(m, experiment)}
+    out = []
+    for run in sorted(due - have):
+        try:
+            out.append(fetch_run(experiment, run, store, LIVE_HOURS))
+        except (ValueError, urllib.error.HTTPError) as e:
+            print("skipped", run, e, flush=True)
+    return out
+
+
+def run_complete(meta: dict, experiment: str) -> bool:
+    """A stored run response is usable: it parses, has every point, every hour it requested from the run on and
+    every variable, with no missing value after the run hour (whose radiation, accumulated over the hour before,
+    is always empty). Raises if the payload is missing or changed."""
+    want = weather_params(experiment)
+    points = len(str(want["latitude"]).split(","))
+    hours = meta.get("params", {}).get("forecast_hours", want["forecast_hours"])
+    body = read_verified(meta)
+    try:
+        df = parse_run(body, points)
+    except (ValueError, KeyError, TypeError):
+        return False
+    labels = pd.date_range(pd.Timestamp(meta["run"]), periods=hours, freq="h")
+    after = df[df["time"] > labels[0]] if set(UNITS) <= set(df.columns) else None
+    return (after is not None and after[list(UNITS)].notna().all().all()
+            and all(pd.DatetimeIndex(g["time"]).equals(labels) for _, g in df.groupby("point")))
 
 
 def parse_run(body: bytes, points: int) -> pd.DataFrame:

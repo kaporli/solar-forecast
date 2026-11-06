@@ -245,6 +245,9 @@ def main(argv=None) -> None:
     sub.add_parser("contract")
     s = sub.add_parser("snapshot", help="save the live Elia datasets (ods209 last 14 days, ods210) with retrieval time")
     s.add_argument("--reconcile", action="store_true", help="instead, every calendar month of ods209 history")
+    s = sub.add_parser("issue", help="one live issuance: forecast record under data/forecasts/")
+    s.add_argument("experiment", choices=["belgium"])
+    s.add_argument("--kind", choices=["11h", "18h"], required=True)
     a = p.parse_args(argv)
     if a.cmd == "fetch":
         fetch(a.experiment, a.weather_only)
@@ -263,6 +266,12 @@ def main(argv=None) -> None:
         today = pd.Timestamp.now(tz="UTC").date()
         for p in (sources.elia_reconcile if a.reconcile else sources.elia_routine)(today):
             print("snapshot", p.name)
+        if not a.reconcile:  # the weather runs of today's issuances (00 UTC for 11:00, 06 UTC for 18:00)
+            for p in sources.fetch_new_runs("belgium", pd.Timestamp.now(tz="UTC")):
+                print("snapshot", p.name)
+    elif a.cmd == "issue":
+        from .issue import issue
+        print("issued", issue(a.experiment, a.kind))
     else:
         sys.stdout.write(F.contract_markdown())
 

@@ -156,3 +156,15 @@ def revisions(con: sqlite3.Connection, ids: list[int]) -> int:
         "SELECT COUNT(*) FROM (SELECT e.start_ns FROM seen s JOIN allowed a ON a.id = s.retrieval_id"
         " JOIN elia_rows e ON e.id = s.row_id WHERE e.region = 'Belgium' AND e.measured_mw IS NOT NULL"
         " GROUP BY e.start_ns HAVING MAX(e.measured_mw) - MIN(e.measured_mw) > 1e-6)").fetchone()[0]
+
+
+def reaching(con: sqlite3.Connection, metas: list[dict], since) -> list[dict]:
+    """The snapshots of `metas` that can hold quarter-hours from `since`: those not indexed yet and those with an
+    indexed row from then. Resolution is per quarter-hour, so resolving from `since` over these equals resolving
+    over all of `metas`, while only they are read and verified (daily inference, not the whole archive)."""
+    s = int(_ns([pd.Timestamp(since)])[0])
+    hit = {k for (k,) in con.execute(
+        "SELECT DISTINCT r.sidecar FROM elia_rows e INDEXED BY elia_rows_start CROSS JOIN seen s ON s.row_id = e.id"
+        " CROSS JOIN retrievals r ON r.id = s.retrieval_id WHERE e.start_ns >= ?", (s,))}
+    known = {k for (k,) in con.execute("SELECT sidecar FROM retrievals")}
+    return [m for m in metas if (n := Path(m["sidecar"]).name) in hit or n not in known]
