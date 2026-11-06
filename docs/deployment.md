@@ -82,23 +82,34 @@ pipeline, which needs its own resource measurement.
 
 ## Scoring
 
-`solar-data score belgium` (`score.py`) scores every issued record whose target day has started and that has no
-final score yet. It applies the scoring policy above.
+`solar-data score belgium` (`score.py`) applies the scoring policy above. An issued record whose target day has
+started is scored when it has no version yet, or when a retrieval made since the previous run holds rows in its
+target day (`summary.json` keeps `elia_through`, the newest retrieval considered; without it every issuance is
+rescored once, which writes nothing new where nothing changed).
 
 - **Actuals:** Elia "measured and upscaled" Belgium Total, MWh per hour from the four quarter-hours
-  (`targets.belgium_target`, the same exclusions as the backtest). Provisional scores resolve every retrieval
-  stored so far (ods209 before ods210, newest non-null). The final score uses only the first ods209 retrieval made
-  at least seven days after the target day ends in Europe/Brussels that requested that day. A final score is not
-  rescored.
+  (`targets.belgium_target`, the same exclusions as the backtest), resolved field by field over every retrieval
+  stored so far (ods209 before ods210, newest non-null).
+- **Final:** once, the measured values and capacity of the first ods209 retrieval made at least seven days after
+  the target day ends in Europe/Brussels whose requested interval holds the whole local day: its UTC dates
+  [start, end) must contain the day's UTC interval, so a November partition does not finalize 1 November (which
+  starts on 31 October at 23:00 UTC). The Elia benchmark is not taken from that retrieval: it stays resolved over
+  all retrievals, so day-ahead forecasts that ods209 no longer carries keep their captured values.
+- **Revised:** after the final version, a later correction or a newly supplied observation (resolved over all
+  retrievals again) appends a `revised` version. The final version is kept.
 - **Versions:** `data/scores/belgium/<target>_<kind>.v<N>.json`, published exclusively like the forecast records.
-  A new version is written only when the status or the per-hour actuals or benchmark change. Each references the
-  forecast record (file, checksum, attempt, model), the retrievals the actuals came from, and the previous
-  version's content hash.
-- **Coverage:** observed and scored hours, the unscored hours, and whether the day is complete. An hour is scored
-  when all four quarter-hours are present, it has no exclusion and the forecast is finite. Missing hours stay
-  missing. Daily totals need a complete day.
+  A new version is written on finalization and otherwise only when the per-hour actuals or benchmark change. Each
+  references the forecast record (file, checksum, attempt, model), the previous version's content hash, and every
+  retrieval a used field came from (fields resolve independently, so actuals and benchmark can come from different
+  retrievals), with its checksums and the fields it supplied.
+- **Coverage:** observed and scored hours, the unscored hours, missing predictions and whether the day is
+  complete. An hour is scored when all four quarter-hours are present, it has no exclusion and the forecast,
+  persistence and physics are all finite, so the three share one sample; an hour missing one of them is listed in
+  `missing_predictions` by predictor. Missing hours stay missing. Daily totals need a complete day.
 - **Metrics:** the hourly metrics of the backtest (`evaluation.metrics`) for the forecast, persistence and physics
   on the scored hours. The Elia benchmark of the kind (`dayahead11hforecast` for 11:00, `dayaheadforecast` for
   18:00) is scored as published, on the scored hours where Elia has a value.
-- **Summary:** `data/scores/belgium/summary.json`, replaced atomically on each run. It pools the latest version of
-  each issuance by kind, once over all scores and once over final scores only.
+- **Summary:** `data/scores/belgium/summary.json`, replaced atomically on each run. Pools are split by kind and by
+  weather availability (`recorded` for the prescribed run, `fallback`), so fallback issuances are reported apart:
+  `<kind>_<availability>_all` over the latest version of each issuance and `<kind>_<availability>_final` over its
+  final version.
