@@ -28,7 +28,7 @@ These cover the model only; the daily pipeline follows.
 ## Daily pipeline measurements on the worker
 
 From the systemd journal of the scheduled runs, 2026-11-05 to 2026-11-08 (CPU time and peak memory of the whole
-unit), and from `tools/deploy_check.py` on 2026-11-09.
+unit), and from the deploy checks of 2026-11-09.
 
 | Run | Runs | CPU time | Peak memory | Wall time |
 | --- | --- | --- | --- | --- |
@@ -36,7 +36,7 @@ unit), and from `tools/deploy_check.py` on 2026-11-09.
 | Capture (`solar-snapshot`), ods209, ods210, weather runs | 22 | 0.6 to 0.9 s | 89 to 102 MB | |
 | Reconciliation (`solar-reconcile`), every ods209 month | 1 | 0.7 s | 89 MB | |
 | Scoring and feed (`solar-data score`), first run over three issuances | 1 | | 164 MB | 1.8 s |
-| Deploy check: parity, reissue, scoring, feed | 3 | | 242 to 258 MB | 7.5 to 8.1 s |
+| Deploy check: parity, replay from pinned snapshots, scoring, feed | 4 | | 260 to 271 MB | 15.5 to 16.6 s |
 
 Every run stays within the protocol's 512 MB. On 2026-11-09 the worker's disk held 888 MB of 32 GB; the data
 directory 62 MB, nearly all of it the snapshot archive.
@@ -175,7 +175,12 @@ the model, features or baselines cannot match the published record by design; it
 the data is rolled back: records and score versions are immutable, and those made by a bad version stay,
 identified by their `code_commit` and model checksum.
 
-**Rehearsal:** see the PR that added this section.
+**Rehearsal (passed 2026-11-09 on the worker,** with the deploy script and checker of #19): a target without the
+feed (b409eda) failed at the staged check and nothing was activated; a rollback to c975d3f (#18) and a deploy of
+`main` (1090866) each passed the staged check, were activated and passed the check again. Every check replayed the
+2026-11-09 18h issuance from its pinned snapshots with identical hours, features, model and inputs, parity 0 MWh.
+The timers were back afterwards. A check takes about 16 s (most of it indexing the pinned snapshots afresh) and
+peaks at 260 to 271 MB.
 
 The web host only serves the latest feed file; it has no forecast code to deploy.
 
