@@ -118,3 +118,8 @@ changed.
   weather availability (`recorded` for the prescribed run, `fallback`), so fallback issuances are reported apart:
   `<kind>_<availability>_all` over the latest version of each issuance and `<kind>_<availability>_final` over its
   final version.
+
+## Public feed
+
+`data/feed/belgium.json`, regenerated after every issuance and scoring run and replaced atomically. Contract,
+states and fixtures: [feed.md](feed.md).
