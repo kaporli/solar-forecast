@@ -32,7 +32,7 @@ unit), and from `tools/deploy_check.py` on 2026-11-09.
 
 | Run | Runs | CPU time | Peak memory | Wall time |
 | --- | --- | --- | --- | --- |
-| Issuance (`solar-issue@`), Elia window, weather, features, model, baselines, record | 4 | 6.4 to 7.7 s | 154 to 167 MB | timer to publication 9 to 10 s |
+| Issuance (`solar-issue@`), Elia window, weather, features, model, baselines, record | 5 | 6.4 to 7.7 s | 154 to 167 MB | timer to publication 9 to 10 s |
 | Capture (`solar-snapshot`), ods209, ods210, weather runs | 22 | 0.6 to 0.9 s | 89 to 102 MB | |
 | Reconciliation (`solar-reconcile`), every ods209 month | 1 | 0.7 s | 89 MB | |
 | Scoring and feed (`solar-data score`), first run over three issuances | 1 | | 164 MB | 1.8 s |
@@ -145,23 +145,39 @@ The worker runs a checkout of this repository pinned to a commit, with the locke
 (`artifacts/belgium/`), feature schema and configuration are versioned together in that commit, and every record
 holds its `code_commit` and model checksums.
 
-- **Deploy:** outside 10:25 to 11:05 and 17:25 to 18:05 Brussels (captures and issuances), as user `solar`:
-  `git pull`, `uv sync --locked --no-dev`, then `.venv/bin/python tools/deploy_check.py`. The timers pick up the
-  new code at their next run; nothing is restarted.
-- **Check** (`tools/deploy_check.py`, exits non-zero on a failure): the packaged model reproduces its fixtures
-  exactly; the checkout reissues the latest published issuance into a temporary directory from the snapshots
-  retrieved by its issuance time and gets the same features hash, model and forecast as the record; scoring and
-  the feed run on the live records. It writes nothing outside a temporary directory except new rows in the
-  derived Elia index.
-- **Roll back:** `git checkout <previous commit>`, `uv sync --locked --no-dev`, the same check. Nothing in the data
-  is rolled back: records and score versions are immutable, and those made by the bad version stay, identified
-  by their `code_commit` and model checksum. Return with `git checkout main`, `git pull` and the check.
-- **Rehearsal (passed 2026-11-09 on the worker):** the check at 1090866 (`main`), a rollback to d2314ac (before
-  the feed) and back to `main`, with `uv sync` and the check at each step. All three reissued the published
-  2026-11-09 18h forecast from the snapshots retrieved by 17:00 UTC with the same features hash, model and
-  forecast values; parity 0 MWh; the working tree was clean afterwards. A check takes about 8 s and peaks at 242
-  to 258 MB.
-- The web host only serves the latest feed file; it has no forecast code to deploy.
+**Deploy and roll back the same way**, as root on the worker: `/srv/solar/bin/solar-deploy <commit>`
+(`tools/solar-deploy`; install or update it with
+`git -C /srv/solar/solar-forecast show origin/main:tools/solar-deploy > /srv/solar/bin/solar-deploy`). It:
+
+1. installs the checker `tools/deploy_check.py` of `origin/main` into `/srv/solar/bin`, outside the checkouts it
+   switches, so an older target without the checker is checked by the current one;
+2. stages the target in a separate worktree with its own locked environment and runs the checker there against
+   the live data; if the check fails, it stops and the active release is untouched;
+3. refuses to go on within 15 minutes of any scheduled run (captures, issuances, scoring, reconciliation);
+   otherwise stops the timers, waits for running jobs, switches the active checkout to the target, syncs its
+   environment and checks it again; if that check fails, it restores the previous commit. The timers start again
+   in every case, and none was due while they were stopped, so nothing catches up late.
+
+**The check** (`tools/deploy_check.py`, exit code non-zero on a failure):
+
+- the packaged model reproduces its fixtures exactly;
+- the latest published issuance is replayed from exactly the snapshots its record lists, each verified against
+  the record's payload and sidecar checksums (a snapshot added to the archive later, even with an earlier
+  retrieval time, is not used); the replayed record must have the same hours (target hours, forecast,
+  persistence and physics), features hash, model identity and inputs;
+- scoring runs on the live records, and the feed builds with contract `kaporli.solar-forecast.feed` version 1.
+  The feed is required, because the scheduled commands publish it.
+
+It writes to a temporary directory only, apart from new rows in the derived Elia index. A release that changes
+the model, features or baselines cannot match the published record by design; it is deployed only after review.
+
+**Rollback targets** must pass the same check, so they have the feed contract: 1090866 (#18) or later. Nothing in
+the data is rolled back: records and score versions are immutable, and those made by a bad version stay,
+identified by their `code_commit` and model checksum.
+
+**Rehearsal:** see the PR that added this section.
+
+The web host only serves the latest feed file; it has no forecast code to deploy.
 
 ## Failure states
 
@@ -185,14 +201,16 @@ reader's expiry rules (`docs/feed.md`). Logs: the worker's journal for `solar-sn
 
 ## Review and retraining
 
-Nothing retrains or promotes automatically, and a moving metric alone triggers neither. Proposed triggers for a
-manual review (for the lead to confirm):
+Nothing retrains or promotes automatically, and a moving metric alone triggers neither. A manual review is due
+when (accepted on #19 as the initial policy):
 
 - the model's daylight MAE is worse than physics over the final scores of the latest 30 target days of the
-  primary series (`11h_recorded_final`), or its daily bias keeps one sign over those days;
+  primary series (`11h_recorded_final`), stated with its coverage (target days, scored hours);
+- three or more fallback or failed primary (11h) issuances in 30 calendar days;
 - Elia's monitored capacity at issuance leaves the range seen in training;
-- fallback or failed issuances in more than a few of the latest 30 days;
 - a change of weather model or of Elia's datasets or definitions.
+
+Capacity and source changes trigger a review only, never retraining by themselves.
 
 A review compares against the frozen backtest and decides whether to retrain. Retraining runs offline with the
 model-selection pipeline (#5) on data up to a stated cutoff; a new model ships as a new artifact with its parity

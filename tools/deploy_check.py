@@ -1,18 +1,25 @@
-"""Deployment and rollback check (#6, docs/deployment.md "Deploying and rolling back"):
+"""Deployment and rollback check (#6, docs/deployment.md "Deploying and rolling back").
 
-    .venv/bin/python tools/deploy_check.py [--target YYYY-MM-DD --kind 11h|18h]
+    <checkout>/.venv/bin/python deploy_check.py --data <live data dir> [--target YYYY-MM-DD --kind 11h|18h]
 
-Run in the checkout that is about to serve, after `uv sync --locked --no-dev`. Writes nothing outside a temporary
-directory except new rows in the derived Elia index. Checks, and exits non-zero if one fails:
+Runs the code of the checkout whose interpreter runs it (a staged release before activation, or the active one)
+against the live data. It writes to a temporary directory only, apart from new rows in the derived Elia index.
+`tools/solar-deploy` keeps this file outside the checkouts it switches, at the version of the main branch. Exits
+non-zero if:
 
-1. the packaged model loads with these library versions and reproduces its fixtures exactly;
-2. this checkout reissues an issuance already published by the worker (by default the latest one) from the
-   snapshots retrieved by its issuance time, and gets the same features and forecast as the record;
-3. scoring and the feed run on the live records.
+1. the packaged model does not reproduce its fixtures exactly;
+2. replaying an issuance already published (by default the latest) from exactly the snapshots its record lists,
+   each verified against the record's payload and sidecar checksums, gives a record whose hours (target hours,
+   forecast, persistence, physics), features hash, model identity or inputs differ;
+3. scoring or the feed (contract `kaporli.solar-forecast.feed` version 1) cannot run on the live records.
 
-Prints the timing and peak memory of each step as JSON."""
+A release that changes the model, features or baselines cannot pass 2 by design; it is deployed only after review.
+Prints the result as JSON, with timing and peak memory."""
+import argparse
+import importlib
 import json
 import resource
+import shutil
 import sys
 import tempfile
 import time
@@ -23,53 +30,91 @@ import pandas as pd
 from solar_forecast import artifact as A
 from solar_forecast import issue, score, sources
 
-try:
-    from solar_forecast import feed
-except ImportError:  # a rollback target older than the feed (#18)
-    feed = None
+FEED = ("kaporli.solar-forecast.feed", 1)
 
 
 def peak_mb() -> int:
     return round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / (2**20 if sys.platform == "darwin" else 2**10))
 
 
-args = dict(zip(sys.argv[1::2], sys.argv[2::2]))
-records = sorted((issue.OUT / "belgium").glob("*_??h.json"), key=lambda p: json.loads(p.read_text())["issuance_utc"])
-if "--target" in args:
-    live = issue.record_path(issue.OUT, "belgium", args["--target"], args["--kind"])
-else:
-    live = next(p for p in reversed(records) if json.loads(p.read_text())["status"] == "issued")
-rec = json.loads(live.read_text())
-out, failed = {"code_commit": issue._git("rev-parse", "HEAD"), "reissued": live.name}, []
+def pinned_store(rec: dict, store: Path, tmp: Path) -> Path:
+    """A store holding exactly the snapshots the record lists, each checked against the record."""
+    pinned = tmp / "raw/snapshots"
+    for ref in rec["inputs"]["snapshots"]:
+        sidecar = store / ref["source"] / ref["sidecar"]
+        if sources.sha256(sidecar.read_bytes()) != ref["sidecar_sha256"]:
+            raise ValueError(f"{ref['sidecar']}: sidecar differs from the record")
+        meta = sources.snapshot(sidecar, store)
+        if meta["sha256"] != ref["sha256"]:
+            raise ValueError(f"{ref['sidecar']}: payload checksum differs from the record")
+        sources.read_verified(meta)
+        dst = pinned / ref["source"] / ref["sidecar"]
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(sidecar, dst)
+        link = pinned.parent / meta["object"] if "object" in meta else dst.parent / meta["file"]
+        link.parent.mkdir(parents=True, exist_ok=True)
+        if not link.exists():
+            link.symlink_to(Path(meta["path"]).resolve())
+    return pinned
 
-t = time.perf_counter()
-out["parity_max_abs_mwh"] = A.parity(A.directory("belgium"))
-out["artifact_s"] = round(time.perf_counter() - t, 2)
-if out["parity_max_abs_mwh"] != 0:
-    failed.append("artifact parity")
 
-with tempfile.TemporaryDirectory() as tmp:
-    t = time.perf_counter()
-    now = pd.Timestamp(rec["issuance_utc"]) + pd.Timedelta(minutes=1)  # as if at the issuance: same inputs
-    again = json.loads(issue.issue("belgium", rec["kind"], rec["target_date"], now, sources.STORE, Path(tmp)).read_text())
-    out["reissue_s"] = round(time.perf_counter() - t, 2)
-    out["features_match"] = again["features_sha256"] == rec["features_sha256"]
-    out["forecast_match"] = [h["forecast_mwh"] for h in again["hours"]] == [h["forecast_mwh"] for h in rec["hours"]]
-    out["model_match"] = again["model"]["model_sha256"] == rec["model"]["model_sha256"]
-    for k in ("features_match", "forecast_match", "model_match"):
-        if not out[k]:
-            failed.append(k)
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--data", type=Path, default=sources.ROOT / "data")
+    ap.add_argument("--target")
+    ap.add_argument("--kind", choices=["11h", "18h"])
+    a = ap.parse_args(argv)
+    store, forecasts = a.data / "raw/snapshots", a.data / "forecasts"
+    records = sorted((forecasts / "belgium").glob("*_??h.json"), key=lambda p: json.loads(p.read_text())["issuance_utc"])
+    live = (issue.record_path(forecasts, "belgium", a.target, a.kind) if a.target
+            else next(p for p in reversed(records) if json.loads(p.read_text())["status"] == "issued"))
+    rec = json.loads(live.read_text())
+    out, failed = {"code": str(Path(issue.__file__).parents[2]), "code_commit": issue._git("rev-parse", "HEAD"),
+                   "replayed": live.name}, []
 
-    t = time.perf_counter()
-    score.score("belgium", out=Path(tmp) / "scores")
-    out["score_s"] = round(time.perf_counter() - t, 2)
-    if feed:
+    def step(name, fn):
         t = time.perf_counter()
-        f = feed.build("belgium")
-        out["feed_s"] = round(time.perf_counter() - t, 2)
-        out["feed_states"] = {k: e["state"] for k, e in f["issuances"].items()}
+        try:
+            return fn()
+        except Exception as e:
+            failed.append(f"{name}: {type(e).__name__}: {e}")
+        finally:
+            out[f"{name}_s"] = round(time.perf_counter() - t, 2)
 
-out["peak_rss_mb"] = peak_mb()
-out["failed"] = failed
-print(json.dumps(out, indent=1))
-sys.exit(1 if failed else 0)
+    out["parity_max_abs_mwh"] = step("artifact", lambda: A.parity(A.directory("belgium")))
+    if out["parity_max_abs_mwh"] != 0:
+        failed.append("artifact parity")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+
+        def replay():
+            pinned = pinned_store(rec, store, tmp)
+            now = pd.Timestamp(rec["issuance_utc"]) + pd.Timedelta(minutes=1)
+            return json.loads(issue.issue("belgium", rec["kind"], rec["target_date"], now, pinned, tmp / "out").read_text())
+
+        again = step("replay", replay)
+        if again:
+            for k in ("hours", "features_sha256", "model", "inputs"):
+                out[f"{k}_match"] = again[k] == rec[k]
+                if not out[f"{k}_match"]:
+                    failed.append(f"{k} differ")
+        step("score", lambda: score.score("belgium", None, store, forecasts, tmp / "scores"))
+
+        def feed():
+            FD = importlib.import_module("solar_forecast.feed")  # required: the timers' commands publish it
+            f = FD.build("belgium", None, forecasts)
+            if (f["schema"], f["version"]) != FEED:
+                raise ValueError(f"feed contract {f['schema']} {f['version']}, expected {FEED}")
+            return {k: e["state"] for k, e in f["issuances"].items()}
+
+        out["feed_states"] = step("feed", feed)
+
+    out["peak_rss_mb"] = peak_mb()
+    out["failed"] = failed
+    print(json.dumps(out, indent=1))
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

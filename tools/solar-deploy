@@ -1,0 +1,58 @@
+#!/bin/sh
+# Deploys or rolls back solar-forecast on the worker (docs/deployment.md "Deploying and rolling back").
+#
+#   /srv/solar/bin/solar-deploy <commit>     as root on the worker
+#
+# 1. Installs the checker of origin/main (or $CHECKER_REF) into /srv/solar/bin, outside the checkouts it switches.
+# 2. Stages <commit> in a separate worktree with its own locked environment and checks it against the live data,
+#    writing only to a temporary directory and the derived index. A failed check stops here: nothing is activated.
+# 3. Refuses to activate within 15 minutes of a scheduled run; otherwise stops the timers, waits for running jobs,
+#    switches the active checkout to <commit>, syncs its environment and checks it again. If that check fails,
+#    it restores the previous commit. The timers are started again in every case.
+set -eu
+REPO=/srv/solar/solar-forecast
+STAGE=/srv/solar/stage
+BIN=/srv/solar/bin
+TIMERS="solar-snapshot.timer solar-reconcile.timer solar-issue-11h.timer solar-issue-18h.timer solar-score.timer"
+UV=/opt/uv/bin/uv
+CHECKER_REF=${CHECKER_REF:-origin/main}
+as_solar() { runuser -u solar -- env UV_CACHE_DIR=/srv/solar/.cache/uv "$@"; }
+check() { as_solar "$1/.venv/bin/python" "$BIN/deploy_check.py" --data "$REPO/data"; }
+sync_env() { as_solar sh -c "cd '$1' && '$UV' sync --locked --no-dev -q"; }
+
+[ $# -eq 1 ] || { echo "usage: solar-deploy <commit>" >&2; exit 2; }
+as_solar git -C "$REPO" fetch -q origin
+target=$(as_solar git -C "$REPO" rev-parse --verify "$1^{commit}")
+current=$(as_solar git -C "$REPO" rev-parse HEAD)
+install -d -o root -g solar -m 755 "$BIN"
+as_solar git -C "$REPO" show "$CHECKER_REF:tools/deploy_check.py" > "$BIN/deploy_check.py"
+echo "active $current, target $target"
+
+# stage and check
+as_solar git -C "$REPO" worktree remove --force "$STAGE" 2>/dev/null || rm -rf "$STAGE"
+as_solar git -C "$REPO" worktree prune
+as_solar git -C "$REPO" worktree add -q --detach "$STAGE" "$target"
+trap 'as_solar git -C "$REPO" worktree remove --force "$STAGE" 2>/dev/null || true' EXIT
+sync_env "$STAGE"
+check "$STAGE" || { echo "staged $target failed its check; nothing activated" >&2; exit 1; }
+
+# activate
+soon=$(systemctl list-timers $TIMERS --no-legend --output=json 2>/dev/null \
+  | python3 -c 'import json,sys,time; t=[x["next"] for x in json.load(sys.stdin) if x.get("next")]; print(int(bool(t) and min(t)/1e6 - time.time() < 900))')
+[ "$soon" = 0 ] || { echo "a scheduled run is due within 15 minutes; try later" >&2; exit 1; }
+trap 'systemctl start $TIMERS; as_solar git -C "$REPO" worktree remove --force "$STAGE" 2>/dev/null || true' EXIT
+systemctl stop $TIMERS
+while systemctl list-units --no-legend --state=active,activating,deactivating 'solar-*.service' | grep -q .; do
+  echo "waiting for running jobs"; sleep 10
+done
+as_solar git -C "$REPO" checkout -q --detach "$target"
+sync_env "$REPO"
+if check "$REPO"; then
+  echo "active $target"
+else
+  echo "active $target failed its check; restoring $current" >&2
+  as_solar git -C "$REPO" checkout -q --detach "$current"
+  sync_env "$REPO"
+  check "$REPO" >/dev/null && echo "restored $current" >&2
+  exit 1
+fi
