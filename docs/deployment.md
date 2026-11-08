@@ -23,8 +23,23 @@ Debian 13, Python 3.13.5. The artifact was built on Python 3.13.7 (arm64), with 
 | Artifact size | 1.40 MB | 50 MB |
 | Largest difference from the fixtures' predictions (146 rows) | 0 MWh | |
 
-These cover the model only. Input retrieval, feature construction and the baselines are measured with the daily
-pipeline, which needs its own resource measurement.
+These cover the model only; the daily pipeline follows.
+
+## Daily pipeline measurements on the worker
+
+From the systemd journal of the scheduled runs, 2026-11-05 to 2026-11-08 (CPU time and peak memory of the whole
+unit), and from `tools/deploy_check.py` on 2026-11-09.
+
+| Run | Runs | CPU time | Peak memory | Wall time |
+| --- | --- | --- | --- | --- |
+| Issuance (`solar-issue@`), Elia window, weather, features, model, baselines, record | 4 | 6.4 to 7.7 s | 154 to 167 MB | timer to publication 9 to 10 s |
+| Capture (`solar-snapshot`), ods209, ods210, weather runs | 22 | 0.6 to 0.9 s | 89 to 102 MB | |
+| Reconciliation (`solar-reconcile`), every ods209 month | 1 | 0.7 s | 89 MB | |
+| Scoring and feed (`solar-data score`), first run over three issuances | 1 | | 164 MB | 1.8 s |
+| Deploy check: parity, reissue, scoring, feed | 3 | | 242 to 258 MB | 7.5 to 8.1 s |
+
+Every run stays within the protocol's 512 MB. On 2026-11-09 the worker's disk held 888 MB of 32 GB; the data
+directory 62 MB, nearly all of it the snapshot archive.
 
 ## Issuances (decided 2026-11-05 in #6)
 
@@ -123,3 +138,77 @@ changed.
 
 `data/feed/belgium.json`, regenerated after every issuance and scoring run and replaced atomically. Contract,
 states and fixtures: [feed.md](feed.md).
+
+## Deploying and rolling back
+
+The worker runs a checkout of this repository pinned to a commit, with the locked dependencies. Code, model
+(`artifacts/belgium/`), feature schema and configuration are versioned together in that commit, and every record
+holds its `code_commit` and model checksums.
+
+- **Deploy:** outside 10:25 to 11:05 and 17:25 to 18:05 Brussels (captures and issuances), as user `solar`:
+  `git pull`, `uv sync --locked --no-dev`, then `.venv/bin/python tools/deploy_check.py`. The timers pick up the
+  new code at their next run; nothing is restarted.
+- **Check** (`tools/deploy_check.py`, exits non-zero on a failure): the packaged model reproduces its fixtures
+  exactly; the checkout reissues the latest published issuance into a temporary directory from the snapshots
+  retrieved by its issuance time and gets the same features hash, model and forecast as the record; scoring and
+  the feed run on the live records. It writes nothing outside a temporary directory except new rows in the
+  derived Elia index.
+- **Roll back:** `git checkout <previous commit>`, `uv sync --locked --no-dev`, the same check. Nothing in the data
+  is rolled back: records and score versions are immutable, and those made by the bad version stay, identified
+  by their `code_commit` and model checksum. Return with `git checkout main`, `git pull` and the check.
+- **Rehearsal (passed 2026-11-09 on the worker):** the check at 1090866 (`main`), a rollback to d2314ac (before
+  the feed) and back to `main`, with `uv sync` and the check at each step. All three reissued the published
+  2026-11-09 18h forecast from the snapshots retrieved by 17:00 UTC with the same features hash, model and
+  forecast values; parity 0 MWh; the working tree was clean afterwards. A check takes about 8 s and peaks at 242
+  to 258 MB.
+- The web host only serves the latest feed file; it has no forecast code to deploy.
+
+## Failure states
+
+Every failure shows up in the public feed's state within one regeneration, or, if the worker stops, through the
+reader's expiry rules (`docs/feed.md`). Logs: the worker's journal for `solar-snapshot`, `solar-reconcile`,
+`solar-issue@*` and `solar-score`; the host's journal for `solar-feed-sync`.
+
+| What fails | What shows | Action |
+| --- | --- | --- |
+| Prescribed weather run not available or incomplete by the issuance | record with `weather_availability = fallback`; feed `fallback` | none if occasional; if regular, check the captures (`run_complete` rejections are refetched at the next capture) and Open-Meteo's publication time |
+| No usable weather run, no Elia snapshot, non-finite inputs, model refuses to load | `<target>_<kind>.failed-<attempt>.json` with the error; unit failed; feed `stale` (`failed`) | read the error; a load refusal means the environment differs from the lock (`uv sync --locked --no-dev`); a missed issuance is not made up later |
+| Issuance starts or would publish after its deadline (downtime, slow disk) | failure record `late`; feed `stale` (`late`) | none for that issuance; check why the worker was late |
+| Directory sync or temporary-file cleanup fails after publication | the forecast stands; `.published.json` with `durable: false` or `cleanup_error`; unit failed | check the disk; the record is complete |
+| Capture fails (Elia or Open-Meteo down) | unit failed; the next issuance may fall back or fail | the next capture retries; Elia day-ahead forecasts not captured in time are lost for good |
+| Scoring fails | unit failed; scores stop changing; the feed is still refreshed | read the error; scoring is idempotent, rerun `solar-data score belgium` |
+| Feed not written | unit exits non-zero after its own result; the web copy ages by the reader's rules | read the error; `solar-data feed belgium` rewrites it |
+| Feed copy to the web host fails | host unit failed; the web copy ages by the reader's rules | read the host's journal |
+| Worker down | no captures, issuances or scores; the web feed goes stale, then unavailable | restart; issuances missed while down stay missing (a late timer leaves `late` records); live snapshots of that period are lost |
+| Elia index damaged or missing | ingest errors | delete `data/raw/index.sqlite`; it is rebuilt from the archive on the next run |
+| Snapshot checksum mismatch | ingest refuses that snapshot | never edit the archive; investigate the file; the archive is append-only |
+
+## Review and retraining
+
+Nothing retrains or promotes automatically, and a moving metric alone triggers neither. Proposed triggers for a
+manual review (for the lead to confirm):
+
+- the model's daylight MAE is worse than physics over the final scores of the latest 30 target days of the
+  primary series (`11h_recorded_final`), or its daily bias keeps one sign over those days;
+- Elia's monitored capacity at issuance leaves the range seen in training;
+- fallback or failed issuances in more than a few of the latest 30 days;
+- a change of weather model or of Elia's datasets or definitions.
+
+A review compares against the frozen backtest and decides whether to retrain. Retraining runs offline with the
+model-selection pipeline (#5) on data up to a stated cutoff; a new model ships as a new artifact with its parity
+fixtures, through a reviewed pull request, and is deployed like any code. Forecasts and scores made by the earlier
+model stay under its checksum. Before a second model is deployed, the score summary must be split by
+`model_sha256` (today it pools by kind and weather availability only, which is correct while one model has run).
+
+## Retention
+
+- **Snapshot archive** (`data/raw/`): kept indefinitely, append-only; it is the only record of what was available
+  at each issuance. The worker's disk was sized for five years of collection.
+- **Forecast, failure and publication records, score versions** (`data/forecasts/`, `data/scores/`): kept
+  indefinitely; a few KB each.
+- **Derived files** (`data/raw/index.sqlite`, `summary.json`, `retrievals.json`, `data/feed/`): rebuilt or
+  rewritten from the above; the feed holds only the current state.
+- **Web host:** only the latest feed file.
+- **Logs:** the systemd journal's own limits.
+- **Backup:** none, by decision (2026-11-05). If the worker is lost, it is rebuilt from this repository and the
+  homelab runbook; live snapshots, records and scores made until then are lost.
