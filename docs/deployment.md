@@ -153,10 +153,18 @@ holds its `code_commit` and model checksums.
    switches, so an older target without the checker is checked by the current one;
 2. stages the target in a separate worktree with its own locked environment and runs the checker there against
    the live data; if the check fails, it stops and the active release is untouched;
-3. refuses to go on within 15 minutes of any scheduled run (captures, issuances, scoring, reconciliation);
-   otherwise stops the timers, waits for running jobs, switches the active checkout to the target, syncs its
-   environment and checks it again; if that check fails, it restores the previous commit. The timers start again
-   in every case, and none was due while they were stopped, so nothing catches up late.
+3. activates within a deadline that keeps five minutes before the next scheduled run (captures, issuances,
+   scoring, reconciliation) for a rollback: it refuses when that run is less than 15 minutes away, stops the
+   timers, waits for running jobs and checks the time left (two minutes needed), then switches the active
+   checkout, syncs its environment and checks it, each step killed at the deadline;
+4. on any failure or overrun of step 3, restores the previous commit, syncs and checks it, killed a minute before
+   the next run. The timers start again only once the active release has passed its check: after a deploy (exit
+   0) or a restore (exit 1). If the restore fails, the timers stay stopped and it says so (exit 2): a scheduled
+   run is then missed, not run late or on an unchecked release.
+
+Its tests (`tests/test_solar_deploy.py`) run it against a throwaway repository with fake `systemctl`, `uv` and
+checker: a deploy, a failed staged check, a sync failure after the switch, a failed restore, an overrun cut at
+the deadline, a start too close to a run, and jobs running into the reserve.
 
 **The check** (`tools/deploy_check.py`, exit code non-zero on a failure):
 
@@ -175,7 +183,7 @@ the model, features or baselines cannot match the published record by design; it
 the data is rolled back: records and score versions are immutable, and those made by a bad version stay,
 identified by their `code_commit` and model checksum.
 
-**Rehearsal (passed 2026-11-09 on the worker,** with the deploy script and checker of #19): a target without the
+**Rehearsal (passed 2026-11-09 on the worker,** with the first version of the deploy script and the checker of #19): a target without the
 feed (b409eda) failed at the staged check and nothing was activated; a rollback to c975d3f (#18) and a deploy of
 `main` (1090866) each passed the staged check, were activated and passed the check again. Every check replayed the
 2026-11-09 18h issuance from its pinned snapshots with identical hours, features, model and inputs, parity 0 MWh.
