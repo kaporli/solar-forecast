@@ -159,9 +159,12 @@ def elia_routine(today, store: Path = STORE) -> list[Path]:
 
 
 def elia_months(today) -> list[tuple]:
-    """Fixed calendar-month partitions of ods209 from its first month through the current one."""
+    """Fixed calendar-month partitions of ods209 from its first month through the current one, in UTC dates, each
+    starting a day early: a Brussels day starts on the previous UTC date (22:00 or 23:00), so each response holds
+    every local day of its month whole."""
     first = pd.Period(ODS209_FIRST_MONTH, "M")
-    return [(m.start_time.date(), (m + 1).start_time.date()) for m in pd.period_range(first, pd.Timestamp(today).to_period("M"))]
+    return [((m.start_time - pd.Timedelta(days=1)).date(), (m + 1).start_time.date())
+            for m in pd.period_range(first, pd.Timestamp(today).to_period("M"))]
 
 
 def elia_reconcile(today, store: Path = STORE) -> list[Path]:

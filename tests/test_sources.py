@@ -116,9 +116,14 @@ def test_legacy_plain_payloads_stay_readable(tmp_path):
     assert sources.read_verified(sources.snapshots("elia", tmp_path)[0]) == body
 
 
-def test_ods209_reconciliation_uses_fixed_calendar_months():
-    assert sources.elia_months("2026-12-03") == [(D("2026-10-01"), D("2026-11-01")), (D("2026-11-01"), D("2026-12-01")),
-                                                 (D("2026-12-01"), D("2027-01-01"))]
+def test_ods209_reconciliation_uses_fixed_calendar_months_holding_every_local_day():
+    assert sources.elia_months("2026-12-03") == [(D("2026-09-30"), D("2026-11-01")), (D("2026-10-31"), D("2026-12-01")),
+                                                 (D("2026-11-30"), D("2027-01-01"))]
+    from solar_forecast import features as F
+    from solar_forecast.score import _requests
+    for a, b in sources.elia_months("2027-12-03"):  # every local day of each month, through both DST changes
+        for d in pd.date_range(pd.Timestamp(a) + pd.Timedelta(days=1), pd.Timestamp(b), inclusive="left"):
+            assert _requests({"start": str(a), "end": str(b)}, F.belgium(), d)
 
 
 def test_get_does_not_retry_permanent_client_errors(monkeypatch):

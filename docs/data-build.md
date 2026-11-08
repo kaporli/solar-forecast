@@ -13,7 +13,8 @@ Decisions for #3, applied by `uv run solar-data build <experiment>`. Column defi
 - Elia collection (storage decision in #6): routine captures fetch the last 14 days of ods209 (plus the forecast
   days published ahead) and the ods210 window, at 10:30 and 17:30 (inputs before the 11:00 and 18:00 issuances)
   and 11:30 and 18:30 Europe/Brussels (Elia's new day-ahead forecasts). `solar-data snapshot --reconcile` fetches
-  every calendar month of ods209 since 2026-10, once a month, to find later revisions; a revision is available
+  every calendar month of ods209 since 2026-10, once a month, to find later revisions (each request starts a day
+  early, so it holds every Brussels day of its month whole); a revision is available
   from the retrieval that found it, never earlier. Requests are bounded by UTC dates and ordered by time and
   region, so unchanged content gives identical bytes.
 - Elia observations are read through a SQLite index beside the archive (`data/raw/index.sqlite`,

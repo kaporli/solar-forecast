@@ -110,11 +110,13 @@ def _allowed(con: sqlite3.Connection, ids: list[int]) -> None:
     con.executemany("INSERT INTO allowed VALUES (?)", [(i,) for i in ids])
 
 
-def resolved(con: sqlite3.Connection, ids: list[int], as_of=None, since=None) -> pd.DataFrame:
+def resolved(con: sqlite3.Connection, ids: list[int], as_of=None, since=None, provenance=False) -> pd.DataFrame:
     """Quarter-hours as `features.BelgiumInputs.resolved`: datetime, region, the four fields and the retrieval time
-    of the winning row. `as_of`: only retrievals at or before it. `since`: only quarter-hours starting from it."""
+    of the winning row. `as_of`: only retrievals at or before it. `since`: only quarter-hours starting from it.
+    `provenance`: also `<field>_from`, the id of the retrieval each field's value came from (fields resolve
+    independently, so one quarter-hour can draw on several retrievals)."""
     _allowed(con, ids)
-    cols = "e.dataset, e.region, e.start_ns, e.measured_mw, e.capacity_mw, e.elia_da11_mw, e.elia_da18_mw, MAX(r.retrieved_ns)"
+    cols = "e.dataset, e.region, e.start_ns, e.measured_mw, e.capacity_mw, e.elia_da11_mw, e.elia_da18_mw, MAX(r.retrieved_ns), r.id"  # r.id: of the MAX row (SQLite)
     a = None if as_of is None else int(_ns([pd.Timestamp(as_of)])[0])
     if since is None:  # full history: walk the links once
         q = (f"SELECT {cols} FROM seen s JOIN allowed al ON al.id = s.retrieval_id JOIN retrievals r ON r.id = s.retrieval_id"
@@ -126,7 +128,7 @@ def resolved(con: sqlite3.Connection, ids: list[int], as_of=None, since=None) ->
              " ON r.id = s.retrieval_id WHERE e.start_ns >= ? AND s.retrieval_id IN (SELECT id FROM allowed)"
              " AND (? IS NULL OR r.retrieved_ns <= ?) GROUP BY e.id")
         args = (int(_ns([pd.Timestamp(since)])[0]), a, a)
-    cur, cols, parts = con.execute(q, args), ["dataset", "region", "start_ns", *FIELDS, "retrieved_ns"], []
+    cur, cols, parts = con.execute(q, args), ["dataset", "region", "start_ns", *FIELDS, "retrieved_ns", "retrieval_id"], []
     while chunk := cur.fetchmany(100_000):  # compact frames, not a million Python tuples at once
         parts.append(pd.DataFrame(chunk, columns=cols).astype({"dataset": "category", "region": "category"}))
     d = pd.concat(parts, ignore_index=True) if parts else pd.DataFrame(columns=cols)
@@ -137,9 +139,20 @@ def resolved(con: sqlite3.Connection, ids: list[int], as_of=None, since=None) ->
                  priority=d["dataset"].astype(str).map(PRIORITY))
     d[FIELDS] = d[FIELDS].astype(float)
     d["region"] = d["region"].astype("str")
-    d = d[["datetime", "region", *FIELDS, "retrieved_at", "priority"]]
+    src = [f"{f}_from" for f in FIELDS] if provenance else []
+    for f in src:
+        d[f] = d["retrieval_id"].where(d[f[:-5]].notna())
+    d = d[["datetime", "region", *FIELDS, "retrieved_at", "priority", *src]]
     d = d.sort_values(["priority", "retrieved_at"], ascending=[True, False])
     return d.groupby(["datetime", "region"], sort=True).first().reset_index().drop(columns="priority")
+
+
+def spans(con: sqlite3.Connection, ids: list[int]) -> list[tuple[pd.Timestamp, pd.Timestamp]]:
+    """First and last quarter-hour start of each given retrieval that holds rows."""
+    _allowed(con, ids)
+    return [(pd.Timestamp(a, tz="UTC"), pd.Timestamp(b, tz="UTC")) for a, b in con.execute(
+        "SELECT MIN(e.start_ns), MAX(e.start_ns) FROM seen s JOIN allowed al ON al.id = s.retrieval_id"
+        " JOIN elia_rows e ON e.id = s.row_id GROUP BY s.retrieval_id")]
 
 
 def stats(con: sqlite3.Connection, ids: list[int]) -> dict:
