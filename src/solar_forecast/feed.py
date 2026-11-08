@@ -10,11 +10,12 @@ file, then renamed). It holds, for each issuance kind, the forecast a visitor sh
 - `unavailable`: no forecast for a target day that has not ended.
 
 Until an issuance's deadline (`issue.LATE`) has passed without a failure, the previous forecast keeps its state.
-`valid_until` is the deadline after which the state shown is no longer current, so a consumer can mark the feed
-stale itself when the feed stops being regenerated. Only public values are written: no paths, hosts or input
-snapshot names."""
+A saved feed ages without regeneration by two rules (`age`, docs/feed.md): past `valid_until` a fresh or fallback
+entry is stale; from its forecast's `end_utc` an entry is unavailable. Only public values are written: no paths,
+hosts or input snapshot names."""
 from __future__ import annotations
 
+import copy
 import json
 import os
 from pathlib import Path
@@ -63,7 +64,13 @@ def _failure(forecasts: Path, name: str, target, kind: str) -> str | None:
     return "late" if "late" in got else "failed" if got else None
 
 
+def _hours(a, b) -> float:
+    return (pd.Timestamp(b) - pd.Timestamp(a)) / pd.Timedelta(hours=1)
+
+
 def _forecast(rec: dict, pub: dict | None) -> dict:
+    run = rec["inputs"]["weather_run_utc"]
+    last = pd.Timestamp(rec["hours"][-1]["target_hour_utc"]) + pd.Timedelta(hours=1)
     return {
         "target_date": rec["target_date"], "issuance_utc": rec["issuance_utc"],
         "published_at": pub["published_at"] if pub else None, "computed_at": rec["computed_at"],
@@ -72,11 +79,14 @@ def _forecast(rec: dict, pub: dict | None) -> dict:
         "actuals_cutoff_utc": rec["inputs"]["actuals_cutoff_utc"], "capacity_mw": rec["inputs"]["capacity_mw"],
         "model": {"candidate": rec["model"]["candidate"], "model_sha256": rec["model"]["model_sha256"],
                   "feature_version": rec["model"]["feature_version"]},
-        "code_commit": rec["code_commit"],
+        "code_commit": rec["code_commit"], "end_utc": last.isoformat(),
         "hours": [{"start_utc": h["target_hour_utc"],
                    "end_utc": (pd.Timestamp(h["target_hour_utc"]) + pd.Timedelta(hours=1)).isoformat(),
-                   "local_hour": h["local_hour"], "lead_hours": h["lead_hours"], "forecast_mwh": h["forecast_mwh"],
-                   "persistence_mwh": h["persistence_mwh"], "physics_mwh": h["physics_mwh"]} for h in rec["hours"]],
+                   "local_hour": h["local_hour"],
+                   "hours_after_issuance": _hours(rec["issuance_utc"], h["target_hour_utc"]),
+                   "weather_lead_hours": _hours(run, h["target_hour_utc"]) if run else None,
+                   "forecast_mwh": h["forecast_mwh"], "persistence_mwh": h["persistence_mwh"],
+                   "physics_mwh": h["physics_mwh"]} for h in rec["hours"]],
     }
 
 
@@ -95,20 +105,34 @@ def entry(exp: F.Experiment, name: str, kind: str, now: pd.Timestamp, forecasts:
         return {"state": state(prev[0]), "reason": None, **base, "valid_until": deadline.isoformat(),
                 "forecast": _forecast(*prev)}
     reason = failure or "missing"
-    day_end = target.tz_localize(exp.tz).tz_convert("UTC")  # the end of the previous forecast's target day
-    if prev and now < day_end:
-        return {"state": "stale", "reason": reason, **base, "valid_until": day_end.isoformat(), "forecast": _forecast(*prev)}
+    if prev and now < pd.Timestamp(_forecast(*prev)["end_utc"]):
+        return {"state": "stale", "reason": reason, **base, "valid_until": None, "forecast": _forecast(*prev)}
     return {"state": "unavailable", "reason": reason, **base, "valid_until": None, "forecast": None}
+
+
+def _latest(kinds: dict) -> str | None:
+    shown = [k for k in KINDS if kinds[k]["forecast"]]
+    return max(shown, key=lambda k: kinds[k]["forecast"]["issuance_utc"], default=None)
+
+
+def age(f: dict, now) -> dict:
+    """A saved feed as a consumer must read it at `now` without regeneration (docs/feed.md, "Reading a saved feed")."""
+    now, f = pd.Timestamp(now), copy.deepcopy(f)
+    for e in f["issuances"].values():
+        if e["forecast"] and now >= pd.Timestamp(e["forecast"]["end_utc"]):
+            e.update(state="unavailable", reason=e["reason"] or "expired", valid_until=None, forecast=None)
+        elif e["state"] in ("fresh", "fallback") and now > pd.Timestamp(e["valid_until"]):
+            e.update(state="stale", reason="expired", valid_until=None)
+    f["latest"] = _latest(f["issuances"])
+    return f
 
 
 def build(name: str = "belgium", now=None, forecasts: Path = FORECASTS) -> dict:
     exp = F.belgium()
     now = pd.Timestamp.now(tz="UTC") if now is None else pd.Timestamp(now)
     kinds = {k: entry(exp, name, k, now, forecasts) for k in KINDS}
-    shown = [k for k in KINDS if kinds[k]["forecast"]]
-    latest = max(shown, key=lambda k: kinds[k]["forecast"]["issuance_utc"], default=None)
     return {"schema": SCHEMA, "version": VERSION, "generated_at": now.isoformat(), "experiment": name,
-            "target": TARGET, "latest": latest, "issuances": kinds, "attribution": ATTRIBUTION}
+            "target": TARGET, "latest": _latest(kinds), "issuances": kinds, "attribution": ATTRIBUTION}
 
 
 def write(name: str = "belgium", now=None, forecasts: Path = FORECASTS, out: Path = OUT) -> Path:

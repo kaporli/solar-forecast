@@ -36,12 +36,14 @@
      "feature_version": "v1"
     },
     "code_commit": "b409edac75f82af4d4600f4fb2553f8d052c4f5d",
+    "end_utc": "2026-11-09T23:00:00+00:00",
     "hours": [
      {
       "start_utc": "2026-11-08T23:00:00+00:00",
       "end_utc": "2026-11-09T00:00:00+00:00",
       "local_hour": 0,
-      "lead_hours": 23.0,
+      "hours_after_issuance": 13.0,
+      "weather_lead_hours": 23.0,
       "forecast_mwh": 0.0,
       "persistence_mwh": 0.0,
       "physics_mwh": 0.0
@@ -50,7 +52,8 @@
       "start_utc": "2026-11-09T00:00:00+00:00",
       "end_utc": "2026-11-09T01:00:00+00:00",
       "local_hour": 1,
-      "lead_hours": 24.0,
+      "hours_after_issuance": 14.0,
+      "weather_lead_hours": 24.0,
       "forecast_mwh": 0.0,
       "persistence_mwh": 0.0,
       "physics_mwh": 0.0
@@ -59,7 +62,8 @@
       "start_utc": "2026-11-09T01:00:00+00:00",
       "end_utc": "2026-11-09T02:00:00+00:00",
       "local_hour": 2,
-      "lead_hours": 25.0,
+      "hours_after_issuance": 15.0,
+      "weather_lead_hours": 25.0,
       "forecast_mwh": 0.0,
       "persistence_mwh": 0.0,
       "physics_mwh": 0.0
@@ -68,7 +72,8 @@
       "start_utc": "2026-11-09T02:00:00+00:00",
       "end_utc": "2026-11-09T03:00:00+00:00",
       "local_hour": 3,
-      "lead_hours": 26.0,
+      "hours_after_issuance": 16.0,
+      "weather_lead_hours": 26.0,
       "forecast_mwh": 0.0,
       "persistence_mwh": 0.0,
       "physics_mwh": 0.0
@@ -77,7 +82,8 @@
       "start_utc": "2026-11-09T03:00:00+00:00",
       "end_utc": "2026-11-09T04:00:00+00:00",
       "local_hour": 4,
-      "lead_hours": 27.0,
+      "hours_after_issuance": 17.0,
+      "weather_lead_hours": 27.0,
       "forecast_mwh": 0.0,
       "persistence_mwh": 0.0,
       "physics_mwh": 0.0
@@ -86,7 +92,8 @@
       "start_utc": "2026-11-09T04:00:00+00:00",
       "end_utc": "2026-11-09T05:00:00+00:00",
       "local_hour": 5,
-      "lead_hours": 28.0,
+      "hours_after_issuance": 18.0,
+      "weather_lead_hours": 28.0,
       "forecast_mwh": 0.0,
       "persistence_mwh": 0.0,
       "physics_mwh": 0.0
@@ -95,7 +102,8 @@
       "start_utc": "2026-11-09T05:00:00+00:00",
       "end_utc": "2026-11-09T06:00:00+00:00",
       "local_hour": 6,
-      "lead_hours": 29.0,
+      "hours_after_issuance": 19.0,
+      "weather_lead_hours": 29.0,
       "forecast_mwh": 0.0,
       "persistence_mwh": 0.0,
       "physics_mwh": 0.0
@@ -104,7 +112,8 @@
       "start_utc": "2026-11-09T06:00:00+00:00",
       "end_utc": "2026-11-09T07:00:00+00:00",
       "local_hour": 7,
-      "lead_hours": 30.0,
+      "hours_after_issuance": 20.0,
+      "weather_lead_hours": 30.0,
       "forecast_mwh": 0.0,
       "persistence_mwh": 0.4975,
       "physics_mwh": 4.004776
@@ -113,7 +122,8 @@
       "start_utc": "2026-11-09T07:00:00+00:00",
       "end_utc": "2026-11-09T08:00:00+00:00",
       "local_hour": 8,
-      "lead_hours": 31.0,
+      "hours_after_issuance": 21.0,
+      "weather_lead_hours": 31.0,
       "forecast_mwh": 202.21048,
       "persistence_mwh": 149.372505,
       "physics_mwh": 1671.424949
@@ -122,7 +132,8 @@
       "start_utc": "2026-11-09T08:00:00+00:00",
       "end_utc": "2026-11-09T09:00:00+00:00",
       "local_hour": 9,
-      "lead_hours": 32.0,
+      "hours_after_issuance": 22.0,
+      "weather_lead_hours": 32.0,
       "forecast_mwh": 1351.660444,
       "persistence_mwh": 482.217518,
       "physics_mwh": 3792.710227
@@ -131,7 +142,8 @@
       "start_utc": "2026-11-09T09:00:00+00:00",
       "end_utc": "2026-11-09T10:00:00+00:00",
       "local_hour": 10,
-      "lead_hours": 33.0,
+      "hours_after_issuance": 23.0,
+      "weather_lead_hours": 33.0,
       "forecast_mwh": 2119.737919,
       "persistence_mwh": 837.012531,
       "physics_mwh": 5310.316361
@@ -140,7 +152,8 @@
       "start_utc": "2026-11-09T10:00:00+00:00",
       "end_utc": "2026-11-09T11:00:00+00:00",
       "local_hour": 11,
-      "lead_hours": 34.0,
+      "hours_after_issuance": 24.0,
+      "weather_lead_hours": 34.0,
       "forecast_mwh": 2886.519269,
       "persistence_mwh": 1150.590042,
       "physics_mwh": 6248.775824
@@ -149,7 +162,8 @@
       "start_utc": "2026-11-09T11:00:00+00:00",
       "end_utc": "2026-11-09T12:00:00+00:00",
       "local_hour": 12,
-      "lead_hours": 35.0,
+      "hours_after_issuance": 25.0,
+      "weather_lead_hours": 35.0,
       "forecast_mwh": 3128.937756,
       "persistence_mwh": 1109.727541,
       "physics_mwh": 6746.855427
@@ -158,7 +172,8 @@
       "start_utc": "2026-11-09T12:00:00+00:00",
       "end_utc": "2026-11-09T13:00:00+00:00",
       "local_hour": 13,
-      "lead_hours": 36.0,
+      "hours_after_issuance": 26.0,
+      "weather_lead_hours": 36.0,
       "forecast_mwh": 2780.791384,
       "persistence_mwh": 889.392532,
       "physics_mwh": 6464.090414
@@ -167,7 +182,8 @@
       "start_utc": "2026-11-09T13:00:00+00:00",
       "end_utc": "2026-11-09T14:00:00+00:00",
       "local_hour": 14,
-      "lead_hours": 37.0,
+      "hours_after_issuance": 27.0,
+      "weather_lead_hours": 37.0,
       "forecast_mwh": 1577.532204,
       "persistence_mwh": 560.18752,
       "physics_mwh": 5468.719578
@@ -176,7 +192,8 @@
       "start_utc": "2026-11-09T14:00:00+00:00",
       "end_utc": "2026-11-09T15:00:00+00:00",
       "local_hour": 15,
-      "lead_hours": 38.0,
+      "hours_after_issuance": 28.0,
+      "weather_lead_hours": 38.0,
       "forecast_mwh": 633.673013,
       "persistence_mwh": 227.930008,
       "physics_mwh": 3798.765029
@@ -185,7 +202,8 @@
       "start_utc": "2026-11-09T15:00:00+00:00",
       "end_utc": "2026-11-09T16:00:00+00:00",
       "local_hour": 16,
-      "lead_hours": 39.0,
+      "hours_after_issuance": 29.0,
+      "weather_lead_hours": 39.0,
       "forecast_mwh": 16.927746,
       "persistence_mwh": 29.945001,
       "physics_mwh": 1443.724403
@@ -194,7 +212,8 @@
       "start_utc": "2026-11-09T16:00:00+00:00",
       "end_utc": "2026-11-09T17:00:00+00:00",
       "local_hour": 17,
-      "lead_hours": 40.0,
+      "hours_after_issuance": 30.0,
+      "weather_lead_hours": 40.0,
       "forecast_mwh": 0.0,
       "persistence_mwh": 0.0,
       "physics_mwh": 0.0
@@ -203,7 +222,8 @@
       "start_utc": "2026-11-09T17:00:00+00:00",
       "end_utc": "2026-11-09T18:00:00+00:00",
       "local_hour": 18,
-      "lead_hours": 41.0,
+      "hours_after_issuance": 31.0,
+      "weather_lead_hours": 41.0,
       "forecast_mwh": 0.0,
       "persistence_mwh": 0.0,
       "physics_mwh": 0.0
@@ -212,7 +232,8 @@
       "start_utc": "2026-11-09T18:00:00+00:00",
       "end_utc": "2026-11-09T19:00:00+00:00",
       "local_hour": 19,
-      "lead_hours": 42.0,
+      "hours_after_issuance": 32.0,
+      "weather_lead_hours": 42.0,
       "forecast_mwh": 0.0,
       "persistence_mwh": 0.0,
       "physics_mwh": 0.0
@@ -221,7 +242,8 @@
       "start_utc": "2026-11-09T19:00:00+00:00",
       "end_utc": "2026-11-09T20:00:00+00:00",
       "local_hour": 20,
-      "lead_hours": 43.0,
+      "hours_after_issuance": 33.0,
+      "weather_lead_hours": 43.0,
       "forecast_mwh": 0.0,
       "persistence_mwh": 0.0,
       "physics_mwh": 0.0
@@ -230,7 +252,8 @@
       "start_utc": "2026-11-09T20:00:00+00:00",
       "end_utc": "2026-11-09T21:00:00+00:00",
       "local_hour": 21,
-      "lead_hours": 44.0,
+      "hours_after_issuance": 34.0,
+      "weather_lead_hours": 44.0,
       "forecast_mwh": 0.0,
       "persistence_mwh": 0.0,
       "physics_mwh": 0.0
@@ -239,7 +262,8 @@
       "start_utc": "2026-11-09T21:00:00+00:00",
       "end_utc": "2026-11-09T22:00:00+00:00",
       "local_hour": 22,
-      "lead_hours": 45.0,
+      "hours_after_issuance": 35.0,
+      "weather_lead_hours": 45.0,
       "forecast_mwh": 0.0,
       "persistence_mwh": 0.0,
       "physics_mwh": 0.0
@@ -248,7 +272,8 @@
       "start_utc": "2026-11-09T22:00:00+00:00",
       "end_utc": "2026-11-09T23:00:00+00:00",
       "local_hour": 23,
-      "lead_hours": 46.0,
+      "hours_after_issuance": 36.0,
+      "weather_lead_hours": 46.0,
       "forecast_mwh": 0.0,
       "persistence_mwh": 0.0,
       "physics_mwh": 0.0

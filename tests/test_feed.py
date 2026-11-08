@@ -48,8 +48,7 @@ def test_failed_late_and_missing_issuances_keep_the_previous_forecast_as_stale(s
     f = records(store, tmp_path)
     fail = f / "belgium/2026-11-08_11h.failed-x.json"
     fail.write_text(json.dumps({"status": "failed"}))
-    day_end = pd.Timestamp("2026-11-07 23:00", tz="UTC").isoformat()
-    assert state(f, NEXT + pd.Timedelta(minutes=2)) == ("stale", "failed", TARGET, day_end)  # before the deadline
+    assert state(f, NEXT + pd.Timedelta(minutes=2)) == ("stale", "failed", TARGET, None)  # before the deadline
     (f / "belgium/2026-11-08_11h.failed-y.json").write_text(json.dumps({"status": "late"}))
     assert state(f, NEXT + pd.Timedelta(minutes=40))[:2] == ("stale", "late")
     for p in (f / "belgium").glob("*.failed-*.json"):
@@ -88,3 +87,55 @@ def test_fixtures_match_the_contract():
         assert f["schema"] == FD.SCHEMA and f["version"] == FD.VERSION and set(f["issuances"]) == set(FD.KINDS)
         seen |= {e["state"] for e in f["issuances"].values()}
     assert seen == {"fresh", "fallback", "stale", "unavailable"}
+
+
+def test_hours_are_counted_from_issuance_and_from_the_weather_run(store, tmp_path):
+    e = FD.build("belgium", ISSUANCE + pd.Timedelta(minutes=2), records(store, tmp_path))["issuances"]["11h"]["forecast"]
+    first, last = e["hours"][0], e["hours"][-1]
+    assert first["start_utc"] == "2026-11-06T23:00:00+00:00" and first["hours_after_issuance"] == 13.0  # 10:00 UTC issuance
+    assert first["weather_lead_hours"] == 23.0  # the 00 UTC run of 2026-11-06
+    assert last["hours_after_issuance"] == 36.0 and e["end_utc"] == "2026-11-07T23:00:00+00:00"
+
+
+def test_fixtures_count_hours_from_their_own_issuance_and_run():
+    from pathlib import Path
+    for p in (Path(__file__).parents[1] / "fixtures/feed").glob("belgium-*.json"):
+        for e in json.loads(p.read_text())["issuances"].values():
+            if f := e["forecast"]:
+                for h in f["hours"]:
+                    start = pd.Timestamp(h["start_utc"])
+                    assert h["hours_after_issuance"] == (start - pd.Timestamp(f["issuance_utc"])) / pd.Timedelta(hours=1)
+                    assert h["weather_lead_hours"] == (start - pd.Timestamp(f["weather"]["run_utc"])) / pd.Timedelta(hours=1)
+
+
+def test_a_saved_feed_ages_like_a_regenerated_one(store, tmp_path):
+    f = records(store, tmp_path)
+    (f / "belgium/2026-11-08_11h.failed-x.json").write_text(json.dumps({"status": "failed"}))
+    saved = FD.build("belgium", NEXT + pd.Timedelta(minutes=2), f)  # 11h stale, showing 2026-11-07
+    assert saved["issuances"]["11h"]["state"] == "stale" and saved["latest"] == "11h"
+    for now in ("2026-11-07 18:00Z", "2026-11-07 23:00Z", "2026-11-08 03:00Z"):  # the evening-to-morning gap
+        aged, fresh = FD.age(saved, now), FD.build("belgium", pd.Timestamp(now), f)
+        assert aged["issuances"]["11h"]["state"] == fresh["issuances"]["11h"]["state"]
+        assert aged["latest"] == fresh["latest"]
+    assert FD.age(saved, "2026-11-07 23:00Z")["issuances"]["11h"]["forecast"] is None
+
+
+def test_a_saved_fresh_feed_goes_stale_after_valid_until(store, tmp_path):
+    saved = FD.build("belgium", ISSUANCE + pd.Timedelta(minutes=2), records(store, tmp_path))
+    e = FD.age(saved, NEXT + FD.LATE)["issuances"]["11h"]
+    assert e["state"] == "fresh"
+    e = FD.age(saved, NEXT + FD.LATE + pd.Timedelta(seconds=1))["issuances"]["11h"]
+    assert (e["state"], e["reason"], e["forecast"]["target_date"]) == ("stale", "expired", TARGET)
+
+
+def test_a_scoring_failure_still_refreshes_the_feed(monkeypatch, tmp_path):
+    import pytest
+    from solar_forecast import cli, score
+    calls = []
+    def boom(name):
+        raise RuntimeError("scoring broke")
+    monkeypatch.setattr(score, "score", boom)
+    monkeypatch.setattr(cli, "_feed", lambda name: calls.append(name) or True)
+    with pytest.raises(RuntimeError, match="scoring broke"):
+        cli.main(["score", "belgium"])
+    assert calls == ["belgium"]

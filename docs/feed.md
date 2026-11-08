@@ -29,7 +29,7 @@ Per kind:
 | `state` | `fresh`, `fallback`, `stale` or `unavailable` (below). |
 | `reason` | Null when fresh or fallback; otherwise `failed`, `late` or `missing` for the latest due issuance. |
 | `expected_issuance_utc`, `deadline_utc` | The latest issuance due at `generated_at` and its publication deadline (30 minutes later). |
-| `valid_until` | When this entry stops being current: the next deadline for fresh and fallback, the end of the shown forecast's target day for stale, null for unavailable. A reader past it should treat the entry as stale even if the file was not regenerated (for example when the worker is down). |
+| `valid_until` | Fresh and fallback only: the deadline of the next issuance of this kind, after which the forecast shown is no longer the latest. Null for stale and unavailable. See "Reading a saved feed". |
 | `forecast` | Null when unavailable; otherwise the forecast shown, below. |
 
 Forecast:
@@ -43,7 +43,8 @@ Forecast:
 | `capacity_mw` | Elia's monitored capacity for Belgium at issuance. |
 | `model` | `candidate`, `model_sha256`, `feature_version`. |
 | `code_commit` | Commit of this repository that issued it. |
-| `hours[]` | `start_utc`, `end_utc`, `local_hour`, `lead_hours` (from issuance to the hour's start), `forecast_mwh`, `persistence_mwh`, `physics_mwh`. A null value is missing, never zero. |
+| `end_utc` | End of the last hour of the target day: from then the forecast is over. |
+| `hours[]` | `start_utc`, `end_utc`, `local_hour`, `hours_after_issuance` (`start_utc` minus `issuance_utc`), `weather_lead_hours` (`start_utc` minus `weather.run_utc`, null without a run), `forecast_mwh`, `persistence_mwh`, `physics_mwh`. A null value is missing, never zero. |
 
 ## States
 
@@ -58,6 +59,19 @@ Per kind, at `generated_at`:
 
 Between an issuance time and its deadline, while no attempt has failed, the previous forecast keeps its state: the
 new one is not due yet.
+
+## Reading a saved feed
+
+The file is regenerated four times a day, so a reader holding it (or reading it while the worker is down) applies
+two rules at the current time, per kind, before showing it (`feed.age` is the reference):
+
+1. **Target day over:** from the forecast's `end_utc`, the entry is `unavailable` (reason kept, or `expired`) and
+   its forecast is not shown. This applies to every state, so a stale forecast does not stay visible overnight.
+2. **Freshness:** otherwise, a `fresh` or `fallback` entry past its `valid_until` is `stale` with reason `expired`.
+
+Then `latest` is recomputed: the kind with the most recent `issuance_utc` among the forecasts still shown, or null.
+Rule 1 matches what a regenerated feed gives; rule 2 gives the state of a regenerated feed without its reason,
+which only the worker knows.
 
 Not in the feed: input snapshot names, file paths, hosts, attempt ids, errors and tracebacks (these stay in the
 records on the worker), and scores (`data/scores/belgium/summary.json`).

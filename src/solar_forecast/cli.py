@@ -284,9 +284,13 @@ def main(argv=None) -> None:
             raise SystemExit("feed not written")
     elif a.cmd == "score":
         from .score import score
-        for p in score(a.experiment):
-            print("scored", p.name)
-        if not _feed(a.experiment):
+        written = False
+        try:
+            for p in score(a.experiment):
+                print("scored", p.name)
+        finally:  # the forecast feed does not depend on scoring; a scoring error stays the one raised
+            written = _feed(a.experiment)
+        if not written:
             raise SystemExit("feed not written")
     elif a.cmd == "feed":
         if not _feed(a.experiment):
