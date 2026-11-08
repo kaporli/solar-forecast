@@ -1,0 +1,516 @@
+{
+ "schema": "kaporli.solar-forecast.feed",
+ "version": 1,
+ "generated_at": "2026-11-08T17:45:00+00:00",
+ "experiment": "belgium",
+ "target": {
+  "label": "measured and upscaled Belgium Total (Elia)",
+  "area": "Belgium",
+  "unit": "MWh per hour",
+  "interval": "hourly, [start_utc, end_utc)",
+  "timezone": "Europe/Brussels"
+ },
+ "latest": "11h",
+ "issuances": {
+  "11h": {
+   "state": "fresh",
+   "reason": null,
+   "expected_issuance_utc": "2026-11-08T10:00:00+00:00",
+   "deadline_utc": "2026-11-08T10:30:00+00:00",
+   "valid_until": "2026-11-09T10:30:00+00:00",
+   "forecast": {
+    "target_date": "2026-11-09",
+    "issuance_utc": "2026-11-08T10:00:00+00:00",
+    "published_at": "2026-11-08T10:01:10.538930833+00:00",
+    "computed_at": "2026-11-08T10:01:10.528000922+00:00",
+    "weather": {
+     "run_utc": "2026-11-08T00:00:00+00:00",
+     "availability": "recorded",
+     "retrieved_at": "2026-11-08T09:30:14.952129+00:00"
+    },
+    "actuals_cutoff_utc": "2026-11-08T09:30:00+00:00",
+    "capacity_mw": 12596.98346,
+    "model": {
+     "candidate": "gbm",
+     "model_sha256": "85776a72578cd33a5569e195d874f83999ef0ed864ef58ecfb063af4159c0f99",
+     "feature_version": "v1"
+    },
+    "code_commit": "b409edac75f82af4d4600f4fb2553f8d052c4f5d",
+    "hours": [
+     {
+      "start_utc": "2026-11-08T23:00:00+00:00",
+      "end_utc": "2026-11-09T00:00:00+00:00",
+      "local_hour": 0,
+      "lead_hours": 23.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.0,
+      "physics_mwh": 0.0
+     },
+     {
+      "start_utc": "2026-11-09T00:00:00+00:00",
+      "end_utc": "2026-11-09T01:00:00+00:00",
+      "local_hour": 1,
+      "lead_hours": 24.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.0,
+      "physics_mwh": 0.0
+     },
+     {
+      "start_utc": "2026-11-09T01:00:00+00:00",
+      "end_utc": "2026-11-09T02:00:00+00:00",
+      "local_hour": 2,
+      "lead_hours": 25.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.0,
+      "physics_mwh": 0.0
+     },
+     {
+      "start_utc": "2026-11-09T02:00:00+00:00",
+      "end_utc": "2026-11-09T03:00:00+00:00",
+      "local_hour": 3,
+      "lead_hours": 26.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.0,
+      "physics_mwh": 0.0
+     },
+     {
+      "start_utc": "2026-11-09T03:00:00+00:00",
+      "end_utc": "2026-11-09T04:00:00+00:00",
+      "local_hour": 4,
+      "lead_hours": 27.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.0,
+      "physics_mwh": 0.0
+     },
+     {
+      "start_utc": "2026-11-09T04:00:00+00:00",
+      "end_utc": "2026-11-09T05:00:00+00:00",
+      "local_hour": 5,
+      "lead_hours": 28.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.0,
+      "physics_mwh": 0.0
+     },
+     {
+      "start_utc": "2026-11-09T05:00:00+00:00",
+      "end_utc": "2026-11-09T06:00:00+00:00",
+      "local_hour": 6,
+      "lead_hours": 29.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.0,
+      "physics_mwh": 0.0
+     },
+     {
+      "start_utc": "2026-11-09T06:00:00+00:00",
+      "end_utc": "2026-11-09T07:00:00+00:00",
+      "local_hour": 7,
+      "lead_hours": 30.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.4975,
+      "physics_mwh": 4.004776
+     },
+     {
+      "start_utc": "2026-11-09T07:00:00+00:00",
+      "end_utc": "2026-11-09T08:00:00+00:00",
+      "local_hour": 8,
+      "lead_hours": 31.0,
+      "forecast_mwh": 202.21048,
+      "persistence_mwh": 149.372505,
+      "physics_mwh": 1671.424949
+     },
+     {
+      "start_utc": "2026-11-09T08:00:00+00:00",
+      "end_utc": "2026-11-09T09:00:00+00:00",
+      "local_hour": 9,
+      "lead_hours": 32.0,
+      "forecast_mwh": 1351.660444,
+      "persistence_mwh": 482.217518,
+      "physics_mwh": 3792.710227
+     },
+     {
+      "start_utc": "2026-11-09T09:00:00+00:00",
+      "end_utc": "2026-11-09T10:00:00+00:00",
+      "local_hour": 10,
+      "lead_hours": 33.0,
+      "forecast_mwh": 2119.737919,
+      "persistence_mwh": 837.012531,
+      "physics_mwh": 5310.316361
+     },
+     {
+      "start_utc": "2026-11-09T10:00:00+00:00",
+      "end_utc": "2026-11-09T11:00:00+00:00",
+      "local_hour": 11,
+      "lead_hours": 34.0,
+      "forecast_mwh": 2886.519269,
+      "persistence_mwh": 1150.590042,
+      "physics_mwh": 6248.775824
+     },
+     {
+      "start_utc": "2026-11-09T11:00:00+00:00",
+      "end_utc": "2026-11-09T12:00:00+00:00",
+      "local_hour": 12,
+      "lead_hours": 35.0,
+      "forecast_mwh": 3128.937756,
+      "persistence_mwh": 1109.727541,
+      "physics_mwh": 6746.855427
+     },
+     {
+      "start_utc": "2026-11-09T12:00:00+00:00",
+      "end_utc": "2026-11-09T13:00:00+00:00",
+      "local_hour": 13,
+      "lead_hours": 36.0,
+      "forecast_mwh": 2780.791384,
+      "persistence_mwh": 889.392532,
+      "physics_mwh": 6464.090414
+     },
+     {
+      "start_utc": "2026-11-09T13:00:00+00:00",
+      "end_utc": "2026-11-09T14:00:00+00:00",
+      "local_hour": 14,
+      "lead_hours": 37.0,
+      "forecast_mwh": 1577.532204,
+      "persistence_mwh": 560.18752,
+      "physics_mwh": 5468.719578
+     },
+     {
+      "start_utc": "2026-11-09T14:00:00+00:00",
+      "end_utc": "2026-11-09T15:00:00+00:00",
+      "local_hour": 15,
+      "lead_hours": 38.0,
+      "forecast_mwh": 633.673013,
+      "persistence_mwh": 227.930008,
+      "physics_mwh": 3798.765029
+     },
+     {
+      "start_utc": "2026-11-09T15:00:00+00:00",
+      "end_utc": "2026-11-09T16:00:00+00:00",
+      "local_hour": 16,
+      "lead_hours": 39.0,
+      "forecast_mwh": 16.927746,
+      "persistence_mwh": 29.945001,
+      "physics_mwh": 1443.724403
+     },
+     {
+      "start_utc": "2026-11-09T16:00:00+00:00",
+      "end_utc": "2026-11-09T17:00:00+00:00",
+      "local_hour": 17,
+      "lead_hours": 40.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.0,
+      "physics_mwh": 0.0
+     },
+     {
+      "start_utc": "2026-11-09T17:00:00+00:00",
+      "end_utc": "2026-11-09T18:00:00+00:00",
+      "local_hour": 18,
+      "lead_hours": 41.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.0,
+      "physics_mwh": 0.0
+     },
+     {
+      "start_utc": "2026-11-09T18:00:00+00:00",
+      "end_utc": "2026-11-09T19:00:00+00:00",
+      "local_hour": 19,
+      "lead_hours": 42.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.0,
+      "physics_mwh": 0.0
+     },
+     {
+      "start_utc": "2026-11-09T19:00:00+00:00",
+      "end_utc": "2026-11-09T20:00:00+00:00",
+      "local_hour": 20,
+      "lead_hours": 43.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.0,
+      "physics_mwh": 0.0
+     },
+     {
+      "start_utc": "2026-11-09T20:00:00+00:00",
+      "end_utc": "2026-11-09T21:00:00+00:00",
+      "local_hour": 21,
+      "lead_hours": 44.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.0,
+      "physics_mwh": 0.0
+     },
+     {
+      "start_utc": "2026-11-09T21:00:00+00:00",
+      "end_utc": "2026-11-09T22:00:00+00:00",
+      "local_hour": 22,
+      "lead_hours": 45.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.0,
+      "physics_mwh": 0.0
+     },
+     {
+      "start_utc": "2026-11-09T22:00:00+00:00",
+      "end_utc": "2026-11-09T23:00:00+00:00",
+      "local_hour": 23,
+      "lead_hours": 46.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.0,
+      "physics_mwh": 0.0
+     }
+    ]
+   }
+  },
+  "18h": {
+   "state": "stale",
+   "reason": "failed",
+   "expected_issuance_utc": "2026-11-08T17:00:00+00:00",
+   "deadline_utc": "2026-11-08T17:30:00+00:00",
+   "valid_until": "2026-11-08T23:00:00+00:00",
+   "forecast": {
+    "target_date": "2026-11-08",
+    "issuance_utc": "2026-11-07T17:00:00+00:00",
+    "published_at": "2026-11-07T17:01:10.100573276+00:00",
+    "computed_at": "2026-11-07T17:01:10.098840477+00:00",
+    "weather": {
+     "run_utc": "2026-11-07T06:00:00+00:00",
+     "availability": "recorded",
+     "retrieved_at": "2026-11-07T16:30:21.695052+00:00"
+    },
+    "actuals_cutoff_utc": "2026-11-07T16:30:00+00:00",
+    "capacity_mw": 12596.98346,
+    "model": {
+     "candidate": "gbm",
+     "model_sha256": "85776a72578cd33a5569e195d874f83999ef0ed864ef58ecfb063af4159c0f99",
+     "feature_version": "v1"
+    },
+    "code_commit": "b409edac75f82af4d4600f4fb2553f8d052c4f5d",
+    "hours": [
+     {
+      "start_utc": "2026-11-07T23:00:00+00:00",
+      "end_utc": "2026-11-08T00:00:00+00:00",
+      "local_hour": 0,
+      "lead_hours": 17.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.0,
+      "physics_mwh": 0.0
+     },
+     {
+      "start_utc": "2026-11-08T00:00:00+00:00",
+      "end_utc": "2026-11-08T01:00:00+00:00",
+      "local_hour": 1,
+      "lead_hours": 18.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.0,
+      "physics_mwh": 0.0
+     },
+     {
+      "start_utc": "2026-11-08T01:00:00+00:00",
+      "end_utc": "2026-11-08T02:00:00+00:00",
+      "local_hour": 2,
+      "lead_hours": 19.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.0,
+      "physics_mwh": 0.0
+     },
+     {
+      "start_utc": "2026-11-08T02:00:00+00:00",
+      "end_utc": "2026-11-08T03:00:00+00:00",
+      "local_hour": 3,
+      "lead_hours": 20.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.0,
+      "physics_mwh": 0.0
+     },
+     {
+      "start_utc": "2026-11-08T03:00:00+00:00",
+      "end_utc": "2026-11-08T04:00:00+00:00",
+      "local_hour": 4,
+      "lead_hours": 21.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.0,
+      "physics_mwh": 0.0
+     },
+     {
+      "start_utc": "2026-11-08T04:00:00+00:00",
+      "end_utc": "2026-11-08T05:00:00+00:00",
+      "local_hour": 5,
+      "lead_hours": 22.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.0,
+      "physics_mwh": 0.0
+     },
+     {
+      "start_utc": "2026-11-08T05:00:00+00:00",
+      "end_utc": "2026-11-08T06:00:00+00:00",
+      "local_hour": 6,
+      "lead_hours": 23.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.0,
+      "physics_mwh": 0.0
+     },
+     {
+      "start_utc": "2026-11-08T06:00:00+00:00",
+      "end_utc": "2026-11-08T07:00:00+00:00",
+      "local_hour": 7,
+      "lead_hours": 24.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 3.705,
+      "physics_mwh": 2.221267
+     },
+     {
+      "start_utc": "2026-11-08T07:00:00+00:00",
+      "end_utc": "2026-11-08T08:00:00+00:00",
+      "local_hour": 8,
+      "lead_hours": 25.0,
+      "forecast_mwh": 116.808958,
+      "persistence_mwh": 600.895022,
+      "physics_mwh": 929.28741
+     },
+     {
+      "start_utc": "2026-11-08T08:00:00+00:00",
+      "end_utc": "2026-11-08T09:00:00+00:00",
+      "local_hour": 9,
+      "lead_hours": 26.0,
+      "forecast_mwh": 505.507926,
+      "persistence_mwh": 1556.427557,
+      "physics_mwh": 2593.956599
+     },
+     {
+      "start_utc": "2026-11-08T09:00:00+00:00",
+      "end_utc": "2026-11-08T10:00:00+00:00",
+      "local_hour": 10,
+      "lead_hours": 27.0,
+      "forecast_mwh": 672.061637,
+      "persistence_mwh": 1886.107569,
+      "physics_mwh": 3536.303364
+     },
+     {
+      "start_utc": "2026-11-08T10:00:00+00:00",
+      "end_utc": "2026-11-08T11:00:00+00:00",
+      "local_hour": 11,
+      "lead_hours": 28.0,
+      "forecast_mwh": 915.801419,
+      "persistence_mwh": 1765.677564,
+      "physics_mwh": 4282.918686
+     },
+     {
+      "start_utc": "2026-11-08T11:00:00+00:00",
+      "end_utc": "2026-11-08T12:00:00+00:00",
+      "local_hour": 12,
+      "lead_hours": 29.0,
+      "forecast_mwh": 1046.406623,
+      "persistence_mwh": 1413.950052,
+      "physics_mwh": 4074.290225
+     },
+     {
+      "start_utc": "2026-11-08T12:00:00+00:00",
+      "end_utc": "2026-11-08T13:00:00+00:00",
+      "local_hour": 13,
+      "lead_hours": 30.0,
+      "forecast_mwh": 692.633759,
+      "persistence_mwh": 1358.70005,
+      "physics_mwh": 3611.074928
+     },
+     {
+      "start_utc": "2026-11-08T13:00:00+00:00",
+      "end_utc": "2026-11-08T14:00:00+00:00",
+      "local_hour": 14,
+      "lead_hours": 31.0,
+      "forecast_mwh": 638.247055,
+      "persistence_mwh": 1147.372542,
+      "physics_mwh": 2913.766474
+     },
+     {
+      "start_utc": "2026-11-08T14:00:00+00:00",
+      "end_utc": "2026-11-08T15:00:00+00:00",
+      "local_hour": 15,
+      "lead_hours": 32.0,
+      "forecast_mwh": 292.724436,
+      "persistence_mwh": 655.442524,
+      "physics_mwh": 1506.486905
+     },
+     {
+      "start_utc": "2026-11-08T15:00:00+00:00",
+      "end_utc": "2026-11-08T16:00:00+00:00",
+      "local_hour": 16,
+      "lead_hours": 33.0,
+      "forecast_mwh": 6.137416,
+      "persistence_mwh": 163.312506,
+      "physics_mwh": 568.390562
+     },
+     {
+      "start_utc": "2026-11-08T16:00:00+00:00",
+      "end_utc": "2026-11-08T17:00:00+00:00",
+      "local_hour": 17,
+      "lead_hours": 34.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 2.8025,
+      "physics_mwh": 0.0
+     },
+     {
+      "start_utc": "2026-11-08T17:00:00+00:00",
+      "end_utc": "2026-11-08T18:00:00+00:00",
+      "local_hour": 18,
+      "lead_hours": 35.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.0,
+      "physics_mwh": 0.0
+     },
+     {
+      "start_utc": "2026-11-08T18:00:00+00:00",
+      "end_utc": "2026-11-08T19:00:00+00:00",
+      "local_hour": 19,
+      "lead_hours": 36.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.0,
+      "physics_mwh": 0.0
+     },
+     {
+      "start_utc": "2026-11-08T19:00:00+00:00",
+      "end_utc": "2026-11-08T20:00:00+00:00",
+      "local_hour": 20,
+      "lead_hours": 37.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.0,
+      "physics_mwh": 0.0
+     },
+     {
+      "start_utc": "2026-11-08T20:00:00+00:00",
+      "end_utc": "2026-11-08T21:00:00+00:00",
+      "local_hour": 21,
+      "lead_hours": 38.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.0,
+      "physics_mwh": 0.0
+     },
+     {
+      "start_utc": "2026-11-08T21:00:00+00:00",
+      "end_utc": "2026-11-08T22:00:00+00:00",
+      "local_hour": 22,
+      "lead_hours": 39.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.0,
+      "physics_mwh": 0.0
+     },
+     {
+      "start_utc": "2026-11-08T22:00:00+00:00",
+      "end_utc": "2026-11-08T23:00:00+00:00",
+      "local_hour": 23,
+      "lead_hours": 40.0,
+      "forecast_mwh": 0.0,
+      "persistence_mwh": 0.0,
+      "physics_mwh": 0.0
+     }
+    ]
+   }
+  }
+ },
+ "attribution": [
+  {
+   "source": "Elia Open Data (Elia Transmission Belgium SA)",
+   "license": "CC BY 4.0",
+   "use": "production and capacity"
+  },
+  {
+   "source": "Open-Meteo.com, ECMWF IFS HRES",
+   "license": "CC BY 4.0",
+   "use": "weather forecasts"
+  }
+ ]
+}

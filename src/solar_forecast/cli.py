@@ -250,6 +250,8 @@ def main(argv=None) -> None:
     s.add_argument("--kind", choices=["11h", "18h"], required=True)
     s = sub.add_parser("score", help="score issued forecasts against Elia actuals: versions under data/scores/")
     s.add_argument("experiment", choices=["belgium"])
+    s = sub.add_parser("feed", help="write the public feed data/feed/<experiment>.json (also after issue and score)")
+    s.add_argument("experiment", choices=["belgium"])
     a = p.parse_args(argv)
     if a.cmd == "fetch":
         fetch(a.experiment, a.weather_only)
@@ -273,13 +275,34 @@ def main(argv=None) -> None:
                 print("snapshot", p.name)
     elif a.cmd == "issue":
         from .issue import issue
-        print("issued", issue(a.experiment, a.kind))
+        written = False
+        try:
+            print("issued", issue(a.experiment, a.kind))
+        finally:  # the feed follows every attempt; an issuance error stays the one raised
+            written = _feed(a.experiment)
+        if not written:
+            raise SystemExit("feed not written")
     elif a.cmd == "score":
         from .score import score
         for p in score(a.experiment):
             print("scored", p.name)
+        if not _feed(a.experiment):
+            raise SystemExit("feed not written")
+    elif a.cmd == "feed":
+        if not _feed(a.experiment):
+            raise SystemExit("feed not written")
     else:
         sys.stdout.write(F.contract_markdown())
+
+
+def _feed(name: str) -> bool:
+    from .feed import write
+    try:
+        print("feed", write(name))
+        return True
+    except Exception as e:
+        print(f"feed not written: {type(e).__name__}: {e}", file=sys.stderr)
+        return False
 
 
 if __name__ == "__main__":
