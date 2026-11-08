@@ -1,15 +1,16 @@
 """`solar-data score belgium`: score issued forecasts against Elia actuals (#6, policy in docs/deployment.md).
 
-Each issued record whose target day has started is scored when it has no version yet or when a retrieval made
-since the last run holds rows in its target day:
+Each issued record whose target day has started is scored when it has no version yet or when a retrieval not
+processed by an earlier run holds rows in its target day:
 
 - **Provisional:** every Elia retrieval stored so far, resolved field by field (ods209 before ods210, newest
   non-null, `index.resolved`). An hour counts once all four quarter-hours are present (`targets.belgium_target`).
 - **Final:** once, the actuals (measured and capacity) of the first stored ods209 retrieval made at least
   `FINAL_AFTER` after the target day ends in Europe/Brussels whose requested UTC interval holds the whole local
   day. The Elia benchmark is resolved over all retrievals as before, independently of that retrieval.
-- **Revised:** after the final version, a later correction or newly supplied observation (all retrievals again)
-  appends a version; the final version stays.
+- **Revised:** after the final version, the final retrieval together with the retrievals made after it, resolved
+  the same way, so a later correction or newly supplied observation appends a version and older retrievals never
+  fill what the final retrieval left out. The final version stays.
 
 A version is written only when the per-hour actuals or benchmark differ from the latest version (or on
 finalization): data/scores/<experiment>/<target>_<kind>.v<N>.json, published exclusively (`issue.publish`), so
@@ -20,8 +21,9 @@ scored and is listed in `coverage.missing_predictions`. The Elia benchmark of th
 11h, `dayaheadforecast` for 18h) is scored on those of them where Elia published one.
 
 `summary.json` pools by kind and weather availability (prescribed run `recorded`, `fallback`): the latest version
-of each issuance (`all`) and its final version (`final`). It also holds `elia_through`, the newest retrieval
-considered, which bounds the next run's work; without it every issuance is rescored once."""
+of each issuance (`all`) and its final version (`final`). `retrievals.json` lists the retrievals processed, by
+sidecar, so a snapshot that appears later with an earlier retrieval time is still picked up; without it every
+issuance is rescored once, which writes nothing where nothing changed."""
 from __future__ import annotations
 
 import hashlib
@@ -147,6 +149,12 @@ def _finalized(act: pd.DataFrame, cur: pd.DataFrame) -> pd.DataFrame:
     return act.drop(columns=bench).merge(cur[["datetime", "region", *bench]], on=["datetime", "region"], how="outer")
 
 
+def _replace(path: Path, text: str) -> None:
+    tmp = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+    tmp.write_text(text)
+    os.replace(tmp, path)
+
+
 def score(name: str = "belgium", now=None, store: Path = sources.STORE, forecasts: Path = FORECASTS,
           out: Path = OUT) -> list[Path]:
     """Write the new score versions and the summary; return the new version paths."""
@@ -154,8 +162,8 @@ def score(name: str = "belgium", now=None, store: Path = sources.STORE, forecast
     now = pd.Timestamp.now(tz="UTC") if now is None else pd.Timestamp(now)
     out = out / name
     out.mkdir(parents=True, exist_ok=True)
-    summary = out / "summary.json"
-    through = json.loads(summary.read_text()).get("elia_through") if summary.exists() else None
+    state = out / "retrievals.json"
+    done = set(json.loads(state.read_text())) if state.exists() else set()
     metas = [m for m in sources.snapshots("elia", store)
              if m["dataset"] in ("ods209", "ods210") and F._ts(m["retrieved_at"]) <= now]
     records = [(p, rec) for p in sorted((forecasts / name).glob("*_??h.json"))
@@ -163,7 +171,7 @@ def score(name: str = "belgium", now=None, store: Path = sources.STORE, forecast
     written = []
     if records and metas:
         con = index.connect(index.path_for(metas))
-        new = [m for m in metas if through is None or F._ts(m["retrieved_at"]) > F._ts(through)]
+        new = [m for m in metas if Path(m["sidecar"]).name not in done]
         spans = index.spans(con, index.ingest(con, new))
         touched = lambda d: any(lo < d[1] and hi >= d[0] for lo, hi in spans)
         todo = [(p, rec) for p, rec in records
@@ -172,18 +180,30 @@ def score(name: str = "belgium", now=None, store: Path = sources.STORE, forecast
             since = min(day_bounds(exp, rec["target_date"])[0] for _, rec in todo)
             scope = index.reaching(con, metas, since)
             by_id = dict(zip(index.ingest(con, scope), scope))
+            by_sidecar = {Path(m["sidecar"]).name: i for i, m in by_id.items()}
             current = index.resolved(con, list(by_id), None, since, provenance=True)
+
+            def actuals(sel):  # measured and capacity from `sel`, the benchmark from all retrievals
+                ids = [by_sidecar[Path(m["sidecar"]).name] for m in sel]
+                return _finalized(index.resolved(con, ids, None, since, provenance=True), current)
+
             for p, rec in todo:
-                latest = _versions(out, p.stem)
-                prev = json.loads(latest[-1].read_text()) if latest else None
-                finalized = prev is not None and prev["status"] in ("final", "revised")
+                vs = [json.loads(x.read_text()) for x in _versions(out, p.stem)]
+                prev = vs[-1] if vs else None
+                final = next((v for v in vs if v["status"] == "final"), None)
                 steps = []
-                if not finalized and (fin := final_retrieval(exp, scope, rec["target_date"])):
-                    fid = next(i for i, m in by_id.items() if m is fin)
-                    steps.append(("final", _finalized(index.resolved(con, [fid], None, since, provenance=True), current)))
-                steps.append(("revised" if finalized or steps else "provisional", current))
-                for status, qh in steps:
+                if final:
+                    fin = by_id[by_sidecar[final["actuals"]["final_retrieval"]]]
+                elif fin := final_retrieval(exp, scope, rec["target_date"]):
+                    steps.append(("final", fin, actuals([fin])))
+                if fin:
+                    after = [m for m in scope if F._ts(m["retrieved_at"]) > F._ts(fin["retrieved_at"])]
+                    steps.append(("revised", fin, actuals([fin, *after])))
+                else:
+                    steps.append(("provisional", None, current))
+                for status, fin, qh in steps:
                     v = score_record(exp, rec, p, qh, status, by_id, now)
+                    v["actuals"]["final_retrieval"] = Path(fin["sidecar"]).name if fin else None
                     if prev and status != "final" and prev["content_sha256"] == v["content_sha256"]:
                         continue
                     n = prev["version"] + 1 if prev else 1
@@ -193,12 +213,12 @@ def score(name: str = "belgium", now=None, store: Path = sources.STORE, forecast
                     publish(path, json.dumps(v, indent=1, allow_nan=False) + "\n")
                     written.append(path)
                     prev = v
-    newest = max((m["retrieved_at"] for m in metas), key=F._ts, default=through)
-    _summary(out, now, newest)
+    _summary(out, now)
+    _replace(state, json.dumps(sorted(done | {Path(m["sidecar"]).name for m in metas}), indent=0) + "\n")
     return written
 
 
-def _summary(out: Path, now: pd.Timestamp, through: str | None) -> None:
+def _summary(out: Path, now: pd.Timestamp) -> None:
     """Pooled metrics by kind and weather availability, over the latest version of each issuance (`all`) and over
     its final version (`final`); replaced atomically."""
     latest, final = {}, {}
@@ -223,8 +243,5 @@ def _summary(out: Path, now: pd.Timestamp, through: str | None) -> None:
                 r["scored"] = r["scored"] & np.isfinite(r[pr].astype(float))
                 m[pr] = {k: (x if isinstance(x, int) else _num(x)) for k, x in E.metrics(r, pr).items()}
             pools[name] = {"issuances": len(vs), "scored_hours": int(rows["scored"].sum()), "metrics": m}
-    text = json.dumps({"generated_at": now.isoformat(), "label": LABEL, "elia_through": through, "pools": pools},
-                      indent=1, allow_nan=False) + "\n"
-    tmp = out / f".summary.json.{uuid.uuid4().hex}.tmp"
-    tmp.write_text(text)
-    os.replace(tmp, out / "summary.json")
+    _replace(out / "summary.json", json.dumps({"generated_at": now.isoformat(), "label": LABEL, "pools": pools},
+                                              indent=1, allow_nan=False) + "\n")

@@ -19,10 +19,10 @@ def versions(tmp_path):
     return [json.loads(p.read_text()) for p in S._versions(tmp_path / "scores/belgium", f"{TARGET}_11h")]
 
 
-def actuals(store, retrieved, dataset="ods210", **kw):
+def actuals(store, retrieved, dataset="ods210", day=DAY, request=("2026-11-01", "2026-11-20"), **kw):
     name = f"{dataset}_total"
-    extra = {"start": "2026-11-01", "end": "2026-11-20"} if dataset == "ods209" else {}
-    store("elia", name, "csv", elia_csv(*DAY, **kw), retrieved, dataset=dataset, **extra)
+    extra = {"start": request[0], "end": request[1]} if dataset == "ods209" else {}
+    store("elia", name, "csv", elia_csv(*day, **kw), retrieved, dataset=dataset, **extra)
 
 
 def test_provisional_then_versions_on_change_then_final_then_later_corrections(store, tmp_path):
@@ -131,4 +131,52 @@ def test_summary_pools_the_latest_versions_apart_by_weather_availability(store, 
     assert set(s["pools"]) == {"11h_recorded_all", "18h_fallback_all"}
     assert s["pools"]["11h_recorded_all"]["issuances"] == 1 and s["pools"]["11h_recorded_all"]["scored_hours"] == 24
     assert s["pools"]["11h_recorded_all"]["metrics"]["persistence"]["hours"] == 24
-    assert s["elia_through"].startswith("2026-11-09T06:00")
+
+
+def test_a_revision_needs_a_retrieval_after_the_final_one(store, tmp_path):
+    live_store(store)
+    go(store, tmp_path)
+    gap = pd.Timestamp("2026-11-07 11:15", tz="UTC")
+    actuals(store, "2026-11-08 06:00Z", measured=lambda t: 122.5)
+    actuals(store, "2026-11-15 06:00Z", "ods209", measured=lambda t: None if t == gap else 130.0)
+    vs = [json.loads(p.read_text()) for p in scored(store, tmp_path, "2026-11-15 07:00Z")]
+    assert [v["status"] for v in vs] == ["final"]  # the older retrieval does not fill the final gap
+    h = next(x for x in vs[0]["hours"] if x["target_hour_utc"].startswith("2026-11-07T11:00"))
+    assert h["actual_mwh"] is None and h["n_quarter_hours"] == 3
+    assert vs[0]["actuals"]["final_retrieval"].startswith("ods209")
+    actuals(store, "2026-11-16 06:00Z", measured=lambda t: 125.0)  # a later observation fills it
+    [p] = scored(store, tmp_path, "2026-11-16 07:00Z")
+    v = json.loads(p.read_text())
+    h = next(x for x in v["hours"] if x["target_hour_utc"].startswith("2026-11-07T11:00"))
+    assert v["status"] == "revised" and h["actual_mwh"] == (130.0 * 3 + 125.0) / 4
+    assert v["hours"][0]["actual_mwh"] == 130.0  # ods209 still wins where it has a value
+
+
+def test_a_snapshot_found_later_with_an_earlier_retrieval_time_is_scored_like_a_rebuild(store, tmp_path):
+    live_store(store)
+    go(store, tmp_path)
+    actuals(store, "2026-11-08 06:00Z", measured=lambda t: 100.0)
+    scored(store, tmp_path, "2026-11-08 07:00Z")
+    actuals(store, "2026-11-08 05:00Z", "ods209", measured=lambda t: 150.0)  # imported later, retrieved earlier
+    [p] = scored(store, tmp_path, "2026-11-08 08:00Z")
+    assert json.loads(p.read_text())["hours"][12]["actual_mwh"] == 150.0
+    (tmp_path / "scores/belgium/retrievals.json").unlink()  # a full rebuild agrees
+    assert scored(store, tmp_path, "2026-11-08 09:00Z") == []
+
+
+def test_monthly_reconciliation_finalizes_the_first_of_the_month(store, tmp_path):
+    live_store(store)
+    go(store, tmp_path)
+    nov1 = ("2026-10-31 23:00", "2026-11-01 23:00")
+    assert S.day_bounds(S.F.belgium(), "2026-11-01") == tuple(pd.Timestamp(t, tz="UTC") for t in nov1)
+    rec = json.loads((tmp_path / f"forecasts/belgium/{TARGET}_11h.json").read_text())
+    p = tmp_path / "forecasts/belgium/2026-11-01_11h.json"
+    p.write_text(json.dumps({**rec, "target_date": "2026-11-01", "hours": [
+        {**h, "target_hour_utc": (pd.Timestamp(h["target_hour_utc"]) - pd.Timedelta(days=6)).isoformat()} for h in rec["hours"]]}))
+    a, b = [tuple(map(str, m)) for m in S.sources.elia_months("2026-11-20")]  # October, November
+    actuals(store, "2026-11-20 06:00Z", "ods209", day=("2026-10-30", "2026-11-01"), request=a, measured=lambda t: 70.0)
+    actuals(store, "2026-11-20 06:01Z", "ods209", day=("2026-10-31", "2026-11-20"), request=b, measured=lambda t: 70.0)
+    out = [json.loads(x.read_text()) for x in scored(store, tmp_path, "2026-11-20 07:00Z") if "2026-11-01" in x.name]
+    assert [v["status"] for v in out] == ["final"] and out[0]["coverage"]["observed"] == 24
+    [r] = [r for r in out[0]["actuals"]["retrievals"] if "measured_mw" in r["fields"]]
+    assert r["sidecar"] == out[0]["actuals"]["final_retrieval"] and r["retrieved_at"].startswith("2026-11-20T06:01")

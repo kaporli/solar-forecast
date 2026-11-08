@@ -83,9 +83,11 @@ pipeline, which needs its own resource measurement.
 ## Scoring
 
 `solar-data score belgium` (`score.py`) applies the scoring policy above. An issued record whose target day has
-started is scored when it has no version yet, or when a retrieval made since the previous run holds rows in its
-target day (`summary.json` keeps `elia_through`, the newest retrieval considered; without it every issuance is
-rescored once, which writes nothing new where nothing changed).
+started is scored when it has no version yet, or when a retrieval not processed by an earlier run holds rows in
+its target day. `retrievals.json` lists the processed retrievals by sidecar, not by retrieval time, so a snapshot
+that appears later with an earlier retrieval time (an import, an overlapping collector) is still picked up and the
+result equals a rebuild; without the file every issuance is rescored once, which writes nothing where nothing
+changed.
 
 - **Actuals:** Elia "measured and upscaled" Belgium Total, MWh per hour from the four quarter-hours
   (`targets.belgium_target`, the same exclusions as the backtest), resolved field by field over every retrieval
@@ -93,10 +95,13 @@ rescored once, which writes nothing new where nothing changed).
 - **Final:** once, the measured values and capacity of the first ods209 retrieval made at least seven days after
   the target day ends in Europe/Brussels whose requested interval holds the whole local day: its UTC dates
   [start, end) must contain the day's UTC interval, so a November partition does not finalize 1 November (which
-  starts on 31 October at 23:00 UTC). The Elia benchmark is not taken from that retrieval: it stays resolved over
+  starts on 31 October at 23:00 UTC); the monthly reconciliation requests start a day early, so each holds every
+  local day of its month and can finalize a day the routine captures missed. The Elia benchmark is not taken from that retrieval: it stays resolved over
   all retrievals, so day-ahead forecasts that ods209 no longer carries keep their captured values.
-- **Revised:** after the final version, a later correction or a newly supplied observation (resolved over all
-  retrievals again) appends a `revised` version. The final version is kept.
+- **Revised:** after the final version, the final retrieval and the retrievals made after it are resolved the same
+  way (ods209 before ods210, newest non-null), so a later correction or a newly supplied observation appends a
+  `revised` version, while older retrievals never fill what the final retrieval left out. The final version is
+  kept, and later versions name it (`final_retrieval`).
 - **Versions:** `data/scores/belgium/<target>_<kind>.v<N>.json`, published exclusively like the forecast records.
   A new version is written on finalization and otherwise only when the per-hour actuals or benchmark change. Each
   references the forecast record (file, checksum, attempt, model), the previous version's content hash, and every
