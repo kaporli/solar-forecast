@@ -135,15 +135,19 @@ def build(name: str = "belgium", now=None, forecasts: Path = FORECASTS) -> dict:
             "target": TARGET, "latest": _latest(kinds), "issuances": kinds, "attribution": ATTRIBUTION}
 
 
-def write(name: str = "belgium", now=None, forecasts: Path = FORECASTS, out: Path = OUT) -> Path:
-    """Build the feed and replace data/feed/<name>.json atomically."""
-    out.mkdir(parents=True, exist_ok=True)
-    path = out / f"{name}.json"
-    tmp = _staged(path, json.dumps(build(name, now, forecasts), indent=1, allow_nan=False) + "\n")
+def publish(path: Path, obj: dict) -> Path:
+    """Replace `path` with `obj` as JSON atomically."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = _staged(path, json.dumps(obj, indent=1, allow_nan=False) + "\n")
     try:
         os.replace(tmp, path)
     except BaseException:
         tmp.unlink(missing_ok=True)
         raise
-    _sync_dir(out)
+    _sync_dir(path.parent)
     return path
+
+
+def write(name: str = "belgium", now=None, forecasts: Path = FORECASTS, out: Path = OUT) -> Path:
+    """Build the feed and replace data/feed/<name>.json atomically."""
+    return publish(out / f"{name}.json", build(name, now, forecasts))

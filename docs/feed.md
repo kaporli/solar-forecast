@@ -74,4 +74,4 @@ Rule 1 matches what a regenerated feed gives; rule 2 gives the state of a regene
 which only the worker knows.
 
 Not in the feed: input snapshot names, file paths, hosts, attempt ids, errors and tracebacks (these stay in the
-records on the worker), and scores (`data/scores/belgium/summary.json`).
+records on the worker), and scores (per issuance in the history, [history.md](history.md); pooled in `data/scores/belgium/summary.json`).

@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from solar_forecast import baselines as B
 from solar_forecast import issue as I
@@ -34,7 +35,7 @@ def test_the_check_passes_on_unchanged_code(tmp_path, capsys):
     published(tmp_path)
     code, out = run(tmp_path, capsys)
     assert code == 0 and out["failed"] == [] and out["hours_match"] and out["inputs_match"]
-    assert out["feed_states"]["11h"] in ("fresh", "stale", "unavailable")
+    assert out["feed_states"]["11h"] in ("fresh", "stale", "unavailable") and out["history_issuances"] == 1
 
 
 def test_a_baseline_change_fails(tmp_path, capsys, monkeypatch):
@@ -61,8 +62,9 @@ def test_a_changed_snapshot_fails(tmp_path, capsys):
     assert code == 1 and any("sidecar differs from the record" in f for f in out["failed"])
 
 
-def test_a_missing_feed_fails(tmp_path, capsys, monkeypatch):
+@pytest.mark.parametrize("module", ["feed", "history"])
+def test_a_missing_feed_or_history_fails(tmp_path, capsys, monkeypatch, module):
     published(tmp_path)
-    monkeypatch.setitem(sys.modules, "solar_forecast.feed", None)  # import fails
+    monkeypatch.setitem(sys.modules, f"solar_forecast.{module}", None)  # import fails
     code, out = run(tmp_path, capsys)
-    assert code == 1 and any(f.startswith("feed: ") for f in out["failed"])
+    assert code == 1 and any(f.startswith(f"{module}: ") for f in out["failed"])
