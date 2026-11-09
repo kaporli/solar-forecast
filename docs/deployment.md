@@ -189,6 +189,8 @@ feed (b409eda) failed at the staged check and nothing was activated; a rollback 
 2026-11-09 18h issuance from its pinned snapshots with identical hours, features, model and inputs, parity 0 MWh.
 The timers were back afterwards. A check takes about 16 s (most of it indexing the pinned snapshots afresh) and
 peaks at 260 to 271 MB.
+The current script (stop, deadline, switch, sync, check, restart) then redeployed `main` (1090866) onto itself on the
+worker: exit 0, 1090866 active, all five timers scheduled again.
 
 The web host only serves the latest feed file; it has no forecast code to deploy.
 
