@@ -250,7 +250,7 @@ def main(argv=None) -> None:
     s.add_argument("--kind", choices=["11h", "18h"], required=True)
     s = sub.add_parser("score", help="score issued forecasts against Elia actuals: versions under data/scores/")
     s.add_argument("experiment", choices=["belgium"])
-    s = sub.add_parser("feed", help="write the public feed data/feed/<experiment>.json (also after issue and score)")
+    s = sub.add_parser("feed", help="write the public feed and history, data/feed/<experiment>.json and -history.json (also after issue and score)")
     s.add_argument("experiment", choices=["belgium"])
     a = p.parse_args(argv)
     if a.cmd == "fetch":
@@ -281,7 +281,7 @@ def main(argv=None) -> None:
         finally:  # the feed follows every attempt; an issuance error stays the one raised
             written = _feed(a.experiment)
         if not written:
-            raise SystemExit("feed not written")
+            raise SystemExit("feed or history not written")
     elif a.cmd == "score":
         from .score import score
         written = False
@@ -291,22 +291,25 @@ def main(argv=None) -> None:
         finally:  # the forecast feed does not depend on scoring; a scoring error stays the one raised
             written = _feed(a.experiment)
         if not written:
-            raise SystemExit("feed not written")
+            raise SystemExit("feed or history not written")
     elif a.cmd == "feed":
         if not _feed(a.experiment):
-            raise SystemExit("feed not written")
+            raise SystemExit("feed or history not written")
     else:
         sys.stdout.write(F.contract_markdown())
 
 
 def _feed(name: str) -> bool:
-    from .feed import write
-    try:
-        print("feed", write(name))
-        return True
-    except Exception as e:
-        print(f"feed not written: {type(e).__name__}: {e}", file=sys.stderr)
-        return False
+    """The feed and the history; False if either failed (each is attempted)."""
+    from . import feed, history
+    ok = True
+    for mod in (feed, history):
+        try:
+            print(mod.__name__.rsplit(".", 1)[1], mod.write(name))
+        except Exception as e:
+            print(f"{mod.__name__.rsplit('.', 1)[1]} not written: {type(e).__name__}: {e}", file=sys.stderr)
+            ok = False
+    return ok
 
 
 if __name__ == "__main__":

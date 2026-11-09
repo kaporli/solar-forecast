@@ -11,7 +11,8 @@ non-zero if:
 2. replaying an issuance already published (by default the latest) from exactly the snapshots its record lists,
    each verified against the record's payload and sidecar checksums, gives a record whose hours (target hours,
    forecast, persistence, physics), features hash, model identity or inputs differ;
-3. scoring or the feed (contract `kaporli.solar-forecast.feed` version 1) cannot run on the live records.
+3. scoring, the feed (contract `kaporli.solar-forecast.feed` version 1) or the history
+   (`kaporli.solar-forecast.history` version 1) cannot run on the live records.
 
 A release that changes the model, features or baselines cannot pass 2 by design; it is deployed only after review.
 Prints the result as JSON, with timing and peak memory."""
@@ -31,6 +32,7 @@ from solar_forecast import artifact as A
 from solar_forecast import issue, score, sources
 
 FEED = ("kaporli.solar-forecast.feed", 1)
+HISTORY = ("kaporli.solar-forecast.history", 1)
 
 
 def peak_mb() -> int:
@@ -109,6 +111,15 @@ def main(argv=None) -> int:
             return {k: e["state"] for k, e in f["issuances"].items()}
 
         out["feed_states"] = step("feed", feed)
+
+        def history():
+            HI = importlib.import_module("solar_forecast.history")  # required: written with the feed
+            h = HI.build("belgium", None, forecasts, tmp / "scores")
+            if (h["schema"], h["version"]) != HISTORY:
+                raise ValueError(f"history contract {h['schema']} {h['version']}, expected {HISTORY}")
+            return len(h["issuances"])
+
+        out["history_issuances"] = step("history", history)
 
     out["peak_rss_mb"] = peak_mb()
     out["failed"] = failed

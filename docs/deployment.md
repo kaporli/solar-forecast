@@ -138,6 +138,7 @@ changed.
 
 `data/feed/belgium.json`, regenerated after every issuance and scoring run and replaced atomically. Contract,
 states and fixtures: [feed.md](feed.md).
+The issuance history `data/feed/belgium-history.json` is written with it: [history.md](history.md).
 
 ## Deploying and rolling back
 
@@ -179,7 +180,8 @@ the deadline, a start too close to a run, and jobs running into the reserve.
 It writes to a temporary directory only, apart from new rows in the derived Elia index. A release that changes
 the model, features or baselines cannot match the published record by design; it is deployed only after review.
 
-**Rollback targets** must pass the same check, so they have the feed contract: 1090866 (#18) or later. Nothing in
+**Rollback targets** must pass the same check, so they have the feed and history contracts: the commit that added
+the history (#7) or later. Nothing in
 the data is rolled back: records and score versions are immutable, and those made by a bad version stay,
 identified by their `code_commit` and model checksum.
 
@@ -208,7 +210,7 @@ reader's expiry rules (`docs/feed.md`). Logs: the worker's journal for `solar-sn
 | Directory sync or temporary-file cleanup fails after publication | the forecast stands; `.published.json` with `durable: false` or `cleanup_error`; unit failed | check the disk; the record is complete |
 | Capture fails (Elia or Open-Meteo down) | unit failed; the next issuance may fall back or fail | the next capture retries; Elia day-ahead forecasts not captured in time are lost for good |
 | Scoring fails | unit failed; scores stop changing; the feed is still refreshed | read the error; scoring is idempotent, rerun `solar-data score belgium` |
-| Feed not written | unit exits non-zero after its own result; the web copy ages by the reader's rules | read the error; `solar-data feed belgium` rewrites it |
+| Feed or history not written | unit exits non-zero after its own result; the web copy of the feed ages by the reader's rules, the history stays as it was | read the error; `solar-data feed belgium` rewrites both |
 | Feed copy to the web host fails | host unit failed; the web copy ages by the reader's rules | read the host's journal |
 | Worker down | no captures, issuances or scores; the web feed goes stale, then unavailable | restart; issuances missed while down stay missing (a late timer leaves `late` records); live snapshots of that period are lost |
 | Elia index damaged or missing | ingest errors | delete `data/raw/index.sqlite`; it is rebuilt from the archive on the next run |
