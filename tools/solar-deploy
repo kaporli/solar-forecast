@@ -1,0 +1,86 @@
+#!/bin/sh
+# Deploys or rolls back solar-forecast on the worker (docs/deployment.md "Deploying and rolling back").
+#
+#   /srv/solar/bin/solar-deploy <commit>     as root on the worker
+#
+# 1. Installs the checker of origin/main (or $CHECKER_REF) into /srv/solar/bin, outside the checkouts it switches.
+# 2. Stages <commit> in a separate worktree with its own locked environment and checks it against the live data,
+#    writing only to a temporary directory and the derived index. A failed check stops here: nothing is activated.
+# 3. Activates within a deadline that keeps RESERVE seconds before the next scheduled run for a rollback: refuses
+#    when that run is less than WINDOW seconds away, stops the timers, waits for running jobs, checks the time left,
+#    then switches the active checkout, syncs and checks it, each step killed at the deadline. Any failure or
+#    overrun restores the previous commit and checks it (killed a minute before the next run). The timers start
+#    again only once the active release passed its check; if the restore fails, they stay stopped and it says so.
+#
+# Exit codes: 0 deployed; 1 not deployed, previous release active, timers running; 2 timers stopped, act by hand.
+set -eu
+REPO=${REPO:-/srv/solar/solar-forecast}
+STAGE=${STAGE:-/srv/solar/stage}
+BIN=${BIN:-/srv/solar/bin}
+UV=${UV:-/opt/uv/bin/uv}
+SYSTEMCTL=${SYSTEMCTL:-systemctl}
+AS_SOLAR=${AS_SOLAR-runuser -u solar -- env UV_CACHE_DIR=/srv/solar/.cache/uv}
+CHECKER_REF=${CHECKER_REF:-origin/main}
+WINDOW=${WINDOW:-900}              # no start with a scheduled run closer than this (seconds)
+RESERVE=${RESERVE:-300}            # kept before the next run for restoring the previous release
+MIN_ACTIVATE=${MIN_ACTIVATE:-120}  # needed to switch, sync and check
+TIMERS="solar-snapshot.timer solar-reconcile.timer solar-issue-11h.timer solar-issue-18h.timer solar-score.timer"
+
+now() { date +%s; }
+# "$@" as solar, killed at epoch $1; fails at once when that has passed
+until_t() { d=$1; shift; l=$((d - $(now))); [ "$l" -gt 0 ] && timeout -k 10 "$l" $AS_SOLAR "$@"; }
+check() { until_t "$1" "$2/.venv/bin/python" "$BIN/deploy_check.py" --data "$REPO/data"; }
+sync_env() { until_t "$1" sh -c "cd '$2' && '$UV' sync --locked --no-dev -q"; }
+switch() { until_t "$1" git -C "$REPO" checkout -q --detach "$2" && sync_env "$1" "$REPO" && check "$1" "$REPO"; }
+
+[ $# -eq 1 ] || { echo "usage: solar-deploy <commit>" >&2; exit 1; }
+$AS_SOLAR git -C "$REPO" fetch -q origin
+target=$($AS_SOLAR git -C "$REPO" rev-parse --verify "$1^{commit}")
+current=$($AS_SOLAR git -C "$REPO" rev-parse HEAD)
+mkdir -p "$BIN"
+$AS_SOLAR git -C "$REPO" show "$CHECKER_REF:tools/deploy_check.py" > "$BIN/deploy_check.py"
+echo "active $current, target $target"
+
+# stage and check: nothing active changes
+cleanup() { $AS_SOLAR git -C "$REPO" worktree remove --force "$STAGE" 2>/dev/null || true; }
+trap cleanup EXIT
+cleanup
+$AS_SOLAR git -C "$REPO" worktree prune
+$AS_SOLAR git -C "$REPO" worktree add -q --detach "$STAGE" "$target"
+far=$(( $(now) + 3600 ))
+if ! { sync_env "$far" "$STAGE" && check "$far" "$STAGE"; }; then
+  echo "staged $target failed its check; nothing activated" >&2; exit 1
+fi
+
+# the next scheduled run, read while the timers still run
+next=$($SYSTEMCTL list-timers $TIMERS --no-legend --output=json \
+  | python3 -c 'import json,sys; t=[x["next"] for x in json.load(sys.stdin) if x.get("next")]; print(min(t)//10**6 if t else 0)')
+[ "$next" -gt 0 ] || { echo "no scheduled run found; nothing activated" >&2; exit 1; }
+[ $((next - $(now))) -ge "$WINDOW" ] || { echo "a scheduled run is due within $WINDOW s; nothing activated" >&2; exit 1; }
+deadline=$((next - RESERVE))
+
+$SYSTEMCTL stop $TIMERS
+while $SYSTEMCTL list-units --no-legend --state=active,activating,deactivating 'solar-*.service' | grep -q .; do
+  if [ $((deadline - $(now))) -lt "$MIN_ACTIVATE" ]; then
+    $SYSTEMCTL start $TIMERS; echo "jobs still running too close to the next run; nothing activated" >&2; exit 1
+  fi
+  echo "waiting for running jobs"; sleep 5
+done
+if [ $((deadline - $(now))) -lt "$MIN_ACTIVATE" ]; then
+  $SYSTEMCTL start $TIMERS; echo "too close to the next run after waiting; nothing activated" >&2; exit 1
+fi
+
+if switch "$deadline" "$target"; then
+  $SYSTEMCTL start $TIMERS
+  echo "active $target"
+  exit 0
+fi
+echo "activating $target failed or ran out of time; restoring $current" >&2
+if switch $((next - 60)) "$current"; then
+  $SYSTEMCTL start $TIMERS
+  echo "restored $current; timers running" >&2
+  exit 1
+fi
+echo "RESTORE FAILED: timers are stopped, active checkout $($AS_SOLAR git -C "$REPO" rev-parse HEAD)." >&2
+echo "Restore and check a release by hand, then: systemctl start $TIMERS" >&2
+exit 2
