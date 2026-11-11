@@ -1,0 +1,11 @@
+[Unit]
+Description=Local view of the solar forecast after the 11:30 and 18:30 Elia captures
+
+[Timer]
+OnCalendar=*-*-* 11:40:00 Europe/Brussels
+OnCalendar=*-*-* 18:40:00 Europe/Brussels
+Persistent=true
+Unit=solar-local.service
+
+[Install]
+WantedBy=timers.target

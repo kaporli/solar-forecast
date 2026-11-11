@@ -29,13 +29,18 @@ def _cell(p: dict) -> dict:
 def dc_per_kw(hours, lat, lon, ghi, dni, dhi, temp_air, wind, p: dict) -> np.ndarray:
     """Mean DC power per kW of nameplate over [s, s + 1h): plane-of-array irradiance from the hour's mean GHI, DNI and
     DHI with the sun at s + 30 min, SAPM cell temperature, PVWatts temperature response. NaN weather stays NaN."""
-    hours = pd.DatetimeIndex(hours)
-    mid = hours + HOUR / 2
+    mid = pd.DatetimeIndex(hours) + HOUR / 2
     sp = pvlib.solarposition.get_solarposition(mid, lat, lon)
+    return dc_from_sun(sp["apparent_zenith"].to_numpy(), sp["azimuth"].to_numpy(),
+                       pvlib.irradiance.get_extra_radiation(mid).to_numpy(), ghi, dni, dhi, temp_air, wind, p)
+
+
+def dc_from_sun(zenith, azimuth, dni_extra, ghi, dni, dhi, temp_air, wind, p: dict) -> np.ndarray:
+    """`dc_per_kw` from a solar position already computed, so many geometries can share it (`local`)."""
     poa = pvlib.irradiance.get_total_irradiance(
-        p["tilt_deg"], p["azimuth_deg"], sp["apparent_zenith"].to_numpy(), sp["azimuth"].to_numpy(),
+        p["tilt_deg"], p["azimuth_deg"], zenith, azimuth,
         np.asarray(dni, float), np.asarray(ghi, float), np.asarray(dhi, float),
-        dni_extra=pvlib.irradiance.get_extra_radiation(mid).to_numpy(), model=p["transposition"], albedo=p["albedo"],
+        dni_extra=dni_extra, model=p["transposition"], albedo=p["albedo"],
     )["poa_global"]
     poa = np.clip(np.asarray(poa, float), 0, None)
     cell = pvlib.temperature.sapm_cell(poa, np.asarray(temp_air, float), np.asarray(wind, float), **_cell(p))

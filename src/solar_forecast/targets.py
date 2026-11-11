@@ -43,9 +43,10 @@ def _finish(t: pd.DataFrame) -> pd.DataFrame:
     return t
 
 
-def belgium_target(qh: pd.DataFrame, first_day, last_day, points) -> pd.DataFrame:
-    """Hourly MWh for region Belgium from resolved quarter-hours (datetime = interval start, UTC)."""
-    b = qh[qh["region"] == "Belgium"].sort_values("datetime").reset_index(drop=True)
+def belgium_target(qh: pd.DataFrame, first_day, last_day, points, region: str = "Belgium") -> pd.DataFrame:
+    """Hourly MWh for one Elia region (the country, or a province for `local`) from resolved quarter-hours
+    (datetime = interval start, UTC)."""
+    b = qh[qh["region"] == region].sort_values("datetime").reset_index(drop=True)
     b["exclusion"] = np.select([b["measured_mw"] < 0, b["measured_mw"] > b["capacity_mw"]],
                                ["negative", "above_capacity"], "")
     hours = pd.DatetimeIndex([]).append([day_hours(d, "Europe/Brussels") for d in pd.date_range(first_day, last_day)])

@@ -24,7 +24,7 @@ CHECKER_REF=${CHECKER_REF:-origin/main}
 WINDOW=${WINDOW:-900}              # no start with a scheduled run closer than this (seconds)
 RESERVE=${RESERVE:-300}            # kept before the next run for restoring the previous release
 MIN_ACTIVATE=${MIN_ACTIVATE:-120}  # needed to switch, sync and check
-TIMERS="solar-snapshot.timer solar-reconcile.timer solar-issue-11h.timer solar-issue-18h.timer solar-score.timer"
+TIMERS="solar-snapshot.timer solar-reconcile.timer solar-issue-11h.timer solar-issue-18h.timer solar-score.timer solar-local.timer"
 
 now() { date +%s; }
 # "$@" as solar, killed at epoch $1; fails at once when that has passed
