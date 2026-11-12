@@ -1,0 +1,16 @@
+[Unit]
+Description=Local view of the solar forecast (Belgium): per lattice point and geometry for the latest due issuance
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=solar
+WorkingDirectory=/srv/solar/solar-forecast
+ExecStart=/srv/solar/solar-forecast/.venv/bin/solar-data local belgium
+TimeoutStartSec=20min
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/srv/solar/solar-forecast/data

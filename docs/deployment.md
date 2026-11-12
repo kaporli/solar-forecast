@@ -140,6 +140,14 @@ changed.
 states and fixtures: [feed.md](feed.md).
 The issuance history `data/feed/belgium-history.json` is written with it: [history.md](history.md).
 
+## Local view
+
+`data/feed/belgium-local.json`, written by `solar-data local belgium` at 11:40 and 18:40 Europe/Brussels
+(`solar-local.timer`, units in `tools/systemd/`), after the 11:30 and 18:30 captures so that Elia's new day-ahead
+forecast is in the archive. It is separate from the issuance and scoring units: a failure leaves the forecast, the
+scores and the feed untouched, and the previous local file ages out at its `end_utc`. The host copies it to the web
+host like the feed. Contract and method: [local.md](local.md).
+
 ## Deploying and rolling back
 
 The worker runs a checkout of this repository pinned to a commit, with the locked dependencies. Code, model

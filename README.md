@@ -13,6 +13,7 @@ Hourly forecasts of Belgian aggregate solar production (Elia, "measured and upsc
 - `docs/model-selection.md`: candidates, the lock and the final-test procedure.
 - `docs/evaluation/belgium-test.md`: the final test of the locked selection, run once.
 - `docs/deployment.md`: runtime and measurements on the deployment worker.
+- `docs/local.md`: the local view, per lattice point and province (`solar-data local belgium`).
 - `artifacts/belgium/`: the deployment model, its manifest and parity fixtures (`solar_forecast.artifact`).
 - `legacy/`: the 2024 student project, kept as it was.
 
@@ -25,6 +26,7 @@ uv run solar-data fetch belgium        # snapshots: Elia ods032/ods209/ods210 an
 uv run solar-data snapshot             # Elia ods209 (last 14 days) and ods210; scheduled four times a day
 uv run solar-data snapshot --reconcile # every calendar month of ods209 history; scheduled monthly
 uv run solar-data fetch pvdaq          # snapshots: PVDAQ 2107 files (checksums pinned) and weather runs
+uv run solar-data local belgium        # the local view: data/local/ and data/feed/belgium-local.json; scheduled twice a day
 uv run solar-data build belgium        # data/build/belgium-v1/{targets,features}.parquet, manifest, report
 uv run solar-data build belgium --inputs data/datasets/belgium-v1.json   # rebuild from the pinned snapshots
 uv run solar-data evaluate belgium     # baselines over the validation folds; the test period stays locked
@@ -41,5 +43,6 @@ content hashes.
 ## Attribution
 
 Elia Open Data (Elia Transmission Belgium SA), CC BY 4.0. Weather data by Open-Meteo.com, CC BY 4.0, model output
-ECMWF IFS HRES. PVDAQ: NREL PV Data Acquisition public dataset, Open Energy Data Initiative, DOI 10.25984/1846021,
+ECMWF IFS HRES. Province boundaries for the local lattice: Eurostat GISCO, NUTS 2021,
+(c) EuroGeographics for the administrative boundaries. PVDAQ: NREL PV Data Acquisition public dataset, Open Energy Data Initiative, DOI 10.25984/1846021,
 CC BY 4.0.

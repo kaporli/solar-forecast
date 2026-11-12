@@ -250,6 +250,8 @@ def main(argv=None) -> None:
     s.add_argument("--kind", choices=["11h", "18h"], required=True)
     s = sub.add_parser("score", help="score issued forecasts against Elia actuals: versions under data/scores/")
     s.add_argument("experiment", choices=["belgium"])
+    s = sub.add_parser("local", help="the local view: per lattice point and geometry for the latest due issuance, data/feed/<experiment>-local.json")
+    s.add_argument("experiment", choices=["belgium"])
     s = sub.add_parser("feed", help="write the public feed and history, data/feed/<experiment>.json and -history.json (also after issue and score)")
     s.add_argument("experiment", choices=["belgium"])
     a = p.parse_args(argv)
@@ -292,6 +294,9 @@ def main(argv=None) -> None:
             written = _feed(a.experiment)
         if not written:
             raise SystemExit("feed or history not written")
+    elif a.cmd == "local":
+        from . import local
+        print("local", local.run(a.experiment))
     elif a.cmd == "feed":
         if not _feed(a.experiment):
             raise SystemExit("feed or history not written")
